@@ -8,7 +8,7 @@ from __init__ import app, db
 feedback_api = Blueprint('feedback_api', __name__, url_prefix='/api/feedback')
 api = Api(feedback_api)
 
-GITHUB_REPO = "blackstar3092/ocs_data_and_com_pages"  
+GITHUB_REPO = "Open-Coding-Society/pages"  
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 
 class FeedbackAPI:
@@ -45,7 +45,7 @@ class FeedbackAPI:
 
             try:
                 response = requests.post(
-                    f"https://api.github.com/repos/blackstar3092/ocs_data_and_com_pages/issues",
+                    f"https://api.github.com/repos/Open-Coding-Society/pages/issues",
                     headers=headers,
                     json=payload
                 )
