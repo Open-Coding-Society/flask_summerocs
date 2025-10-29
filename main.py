@@ -15,6 +15,8 @@ from api.jwt_authorize import token_required
 from __init__ import app, db, login_manager  # Key Flask objects 
 # API endpoints
 from api.user import user_api 
+from api.python_exec_api import python_exec_api
+from api.javascript_exec_api import javascript_exec_api
 from api.section import section_api
 from api.pfp import pfp_api
 from api.stock import stock_api
@@ -59,6 +61,8 @@ app.config['KASM_API_KEY_SECRET'] = os.getenv('KASM_API_KEY_SECRET')
 
 
 # register URIs for api endpoints
+app.register_blueprint(python_exec_api)
+app.register_blueprint(javascript_exec_api)
 app.register_blueprint(user_api)
 app.register_blueprint(section_api)
 app.register_blueprint(pfp_api) 
