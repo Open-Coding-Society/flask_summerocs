@@ -1,6 +1,6 @@
 """
 MicroBlog API
-Handles CRUD operations for micro blog posts and topics
+Handles CRUD operations for micro blog posts, replies, reactions, and topics
 """
 from flask import Blueprint, request, jsonify, g
 from flask_restful import Api, Resource
@@ -84,7 +84,6 @@ class MicroBlogAPI:
             search = request.args.get('search')
             
             try:
-                page_path = request.args.get('pagePath')
                 if search:
                     microblogs = MicroBlog.search_content(search, limit)
                 elif topic_id:
@@ -125,7 +124,7 @@ class MicroBlogAPI:
                 return {'message': 'MicroBlog post not found'}, 404
             
             # Check if user owns the post or is admin
-            if microblog._user_id != current_user.id and current_user.role != 'Admin':
+            if microblog._user_id != current_user.id and getattr(current_user, 'role', None) != 'Admin':
                 return {'message': 'Permission denied'}, 403
             
             try:
@@ -159,7 +158,7 @@ class MicroBlogAPI:
                 return {'message': 'MicroBlog post not found'}, 404
             
             # Check if user owns the post or is admin
-            if microblog._user_id != current_user.id and current_user.role != 'Admin':
+            if microblog._user_id != current_user.id and getattr(current_user, 'role', None) != 'Admin':
                 return {'message': 'Permission denied'}, 403
             
             try:
@@ -181,11 +180,13 @@ class MicroBlogAPI:
             if not body:
                 return {'message': 'Request body is required'}, 400
             
-            microblog_id = body.get('microblogId')
+            # Accept both postId (frontend) and microblogId (legacy)
+            microblog_id = body.get('postId') or body.get('microblogId')
             reply_content = body.get('content')
+            # Optional: topicPath is ignored here (reply attaches to existing post)
             
             if not microblog_id:
-                return {'message': 'MicroBlog ID is required'}, 400
+                return {'message': 'postId (or microblogId) is required'}, 400
             
             if not reply_content:
                 return {'message': 'Reply content is required'}, 400
@@ -207,6 +208,17 @@ class MicroBlogAPI:
                 return {'message': str(e)}, 400
             except Exception as e:
                 return {'message': f'Error adding reply: {str(e)}'}, 500
+
+        def get(self):
+            """Fetch replies for a specific microblog post (public)"""
+            post_id = request.args.get('postId', type=int) or request.args.get('microblogId', type=int)
+            if not post_id:
+                return {'message': 'postId query param is required'}, 400
+            microblog = MicroBlog.get_by_id(post_id)
+            if not microblog:
+                return {'message': 'MicroBlog post not found'}, 404
+            replies = microblog.get_replies()
+            return jsonify({'replies': replies, 'count': len(replies)})
     
     class _Reaction(Resource):
         """Handle reactions to micro blog posts"""
@@ -220,7 +232,7 @@ class MicroBlogAPI:
             if not body:
                 return {'message': 'Request body is required'}, 400
             
-            microblog_id = body.get('microblogId')
+            microblog_id = body.get('microblogId') or body.get('postId')
             reaction_type = body.get('reactionType')
             
             if not microblog_id:
@@ -253,7 +265,7 @@ class MicroBlogAPI:
             if not body:
                 return {'message': 'Request body is required'}, 400
             
-            microblog_id = body.get('microblogId')
+            microblog_id = body.get('microblogId') or body.get('postId')
             reaction_type = body.get('reactionType')
             
             if not microblog_id:
@@ -291,7 +303,7 @@ class TopicAPI:
             """Create a new topic for a page (Admin only)"""
             current_user = g.current_user
             
-            if current_user.role != 'Admin':
+            if getattr(current_user, 'role', None) != 'Admin':
                 return {'message': 'Permission denied. Admin access required.'}, 403
             
             body = request.get_json()
@@ -384,7 +396,7 @@ class TopicAPI:
             """Update topic settings (Admin only)"""
             current_user = g.current_user
             
-            if current_user.role != 'Admin':
+            if getattr(current_user, 'role', None) != 'Admin':
                 return {'message': 'Permission denied. Admin access required.'}, 403
             
             body = request.get_json()
@@ -496,7 +508,6 @@ class TopicAPI:
 
             except Exception as e:
                 return {'message': f'Error retrieving micro blog posts: {str(e)}'}, 500
-                # ...existing code...
 
 
 # Register endpoints with unique endpoint names
