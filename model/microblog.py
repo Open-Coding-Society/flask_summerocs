@@ -121,20 +121,36 @@ class MicroBlog(db.Model):
             db.session.rollback()
             raise e
 
+    def get_replies(self):
+        """Return replies array; empty list if none or malformed."""
+        if not self._data or 'replies' not in self._data or not isinstance(self._data['replies'], list):
+            return []
+        return self._data['replies']
+
     def add_reply(self, user_id, reply_content):
-        """Add a reply to the JSON data structure"""
+        """Add a reply to the JSON data structure, including userName for display."""
         if len(reply_content) > 280:
             raise ValueError("Reply content must be 280 characters or less")
-            
+        
         if not self._data:
             self._data = {}
-            
-        if 'replies' not in self._data:
+        
+        if 'replies' not in self._data or not isinstance(self._data['replies'], list):
             self._data['replies'] = []
-            
+        
+        # Attempt to include userName for frontend display
+        user_name = None
+        try:
+            from model.user import User
+            u = User.query.get(user_id)
+            user_name = u.name if u else None
+        except Exception:
+            user_name = None
+        
         reply = {
             'id': len(self._data['replies']) + 1,  # Simple incrementing ID
             'userId': user_id,
+            'userName': user_name,
             'content': reply_content,
             'timestamp': datetime.utcnow().isoformat()
         }
