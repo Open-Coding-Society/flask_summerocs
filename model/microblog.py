@@ -211,6 +211,31 @@ class MicroBlog(db.Model):
                 raise e
         
         return False
+    
+    def get_reactions(self):
+
+        if not self._data or 'reactions' not in self._data or not isinstance(self._data['reactions'], dict):
+            return {}
+        return self._data['reactions']
+
+    def get_reaction_counts(self):
+        reactions = self.get_reactions()
+        reaction_counts = {}
+        for reaction_type, user_ids in reactions.items():
+            reaction_counts[reaction_type] = len(user_ids)
+        return reaction_counts
+
+    def user_has_reacted(self, user_id, reaction_type):
+        reactions = self.get_reactions()
+        if reaction_type not in reactions:
+            return False
+        return user_id in reactions[reaction_type]
+
+    def toggle_reaction(self, user_id, reaction_type):
+        if self.user_has_reacted(user_id, reaction_type):
+            return self.remove_reaction(user_id, reaction_type)
+        else:
+            return self.add_reaction(user_id, reaction_type)
 
     def delete(self):
         """Delete the micro blog post"""
