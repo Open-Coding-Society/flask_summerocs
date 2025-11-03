@@ -62,6 +62,10 @@ def token_required(roles=None):
                     "error": str(e)
                 }, 500
 
+            # If this is a CORS preflight request, return 200 OK immediately
+            if request.method == 'OPTIONS':
+                return ('', 200)
+
             # Success, return to the decorated function
             # func_to_guard is the function with the @token_required
             # func_to_guard returns with the original function arguments

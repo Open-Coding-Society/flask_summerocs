@@ -25,7 +25,7 @@ Use this project to create a Flask Server.
 - Open a Terminal, clone a project and `cd` into the project directory.  Use a `different link` and name for `name` for clone to match your repo.
 
 ```bash
-mkdir -p ~/open; cd ~/open
+mkdir -p ~/openccs; cd ~/opencs
 
 git clone https://github.com/open-coding-ocietyflask.git
 
@@ -59,8 +59,8 @@ pip install -r requirements.txt
 
   - Make a local `.env` file in root of project to contain your secret passwords
 
-  ```shella
-  # Reset Password
+  ```shell
+  # Reset password for users who forget their password
   DEFAULT_PASSWORD='123Qwerty!'
   # Admin user defaults
   ADMIN_USER='Thomas Edison'
@@ -72,6 +72,20 @@ pip install -r requirements.txt
   DEFAULT_UID='hop'
   DEFAULT_USER_PASSWORD='123Hop!'
   DEFAULT_USER_PFP='hop.png'
+  # Obtain key, [Google AI Studio](https://aistudio.google.com/api-keys)
+  GEMINI_API_KEY=xxxxx
+  GEMINI_SERVER=https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
+  # GitHub Configuation
+  GITHUB_TOKEN=ghp_xxx
+  GITHUB_TARGET_TYPE=user  # Use 'organization' or 'user'
+  GITHUB_TARGET_NAME=Open-Coding-Society
+  # KASM Configuration (server is defaulted)
+  KASM_SERVER=https://kasm.opencodingsociety.com
+  KASM_API_KEY_SECRET=xxxx
+  KASM_API_KEY=xxx
+  # DB Configuration, AWS RDS
+  DB_USERNAME='admin'
+  DB_PASSWORD='xxxxx'
   ```
 
   - Make the database and init data.
@@ -83,7 +97,7 @@ pip install -r requirements.txt
   - Explore newly created SQL database
     - Navigate too instance/volumes
     - View/open `user_management.db`
-    - Loook at `Users` table in viewer
+    - Loook at `users` table in viewer
 
   - Run the Project
     - Select/open `main.py` in VSCode
@@ -93,29 +107,70 @@ pip install -r requirements.txt
       - Output window will contain page to launch http://127.0.0.1:8587
     - Login using your secrets
 
+  - Basic API test
+    - [Jokes](http://127.0.0.1:8587/api/jokes)
+
+### User Operations
+| Purpose | Correct Endpoint | What It Does |
+|---------|-----------------|--------------|
+| **Login** | `/api/authenticate` | Authenticates user & sets cookie |
+| **Get User** | `/api/id` | Gets current logged-in user |
+| **Signup** | `/api/user` | Creates new user account |
+| **Posts** | `/api/post/all` | Gets all social media posts |
+| **Create Post** | `/api/post` | Creates a new post |
+| **Gemini AI** | `/api/gemini` | Chat with AI assistant |
+
+### MicroBlog Operations
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/microblog` | Create new post |
+| GET | `/api/microblog` | Get posts (with filters) |
+| PUT | `/api/microblog` | Update post |
+| DELETE | `/api/microblog` | Delete post |
+
+**Query Parameters for GET:**
+- `?topicId=1` - Posts for specific topic
+- `?userId=123` - Posts by specific user  
+- `?search=flask` - Search content
+- `?limit=20` - Limit results
+
+### MicroBlog Interactions
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/microblog/reply` | Add reply to post |
+| POST | `/api/microblog/reaction` | Add reaction (👍, ❤️, etc.) |
+| DELETE | `/api/microblog/reaction` | Remove reaction |
+
+### Microblog Page Integration
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/microblog/page/<page_key>` | Get posts for specific page |
+| POST | `/api/microblog/topics/auto-create` | Auto-create topic for page |
+| GET | `/api/microblog/topics?pagePath=X` | Get topic by page path |
+
 ## Idea
-
-### Visual thoughts
-
-> The Starter code should be fun and practical.
-
-- Organize with Bootstrap menu
-- Add some color and fun through VANTA Visuals (birds, halo, solar, net)
-- Show some practical and fun links (HREFs) like Twitter, Git, Youtube
-- Build a Sample Page (Table)
-- Show the project-specific links (HREFs) per page
 
 ### Files and Directories in this Project
 
-The key files and directories in this project are in this online article.
+The key files and directories in this project are in these online articles.  However, this needs updating!!!
 
 [Flask Anatomy](https://pages.opencodingsociety.com/flask-anatomy)
+
+[Flask Files](https://pages.opencodingsociety.com/flask-structure-overview)
 
 Or read this entire series of articles starting with the Intro, Anatomy, and more ...
 
 [Flask Intro](https://pages.opencodingsociety.com/flask-intro)
 
 ### Implementation Summary
+
+#### Oct 2025
+
+> Updates for 2025-2026 school year.  Focus on documentation and API functionality.
+
+- Work to make documentation materials useful.
+- Add gemini API's
+- Add flocker API's, social medai support
 
 #### July 2024
 

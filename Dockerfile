@@ -19,7 +19,7 @@ RUN pip install --upgrade pip && \
 
 # Set environment variables
 ENV FLASK_ENV=production \
-    GUNICORN_CMD_ARGS="--workers=3 --bind=0.0.0.0:8587 --access-logfile -"
+    GUNICORN_CMD_ARGS="--workers=5 --threads=2 --bind=0.0.0.0:8587 --timeout=30 --access-logfile -"
 
 # Expose application port
 EXPOSE 8587

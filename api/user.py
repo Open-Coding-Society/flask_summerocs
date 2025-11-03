@@ -354,18 +354,42 @@ class UserAPI:
                             current_app.config["SECRET_KEY"],
                             algorithm="HS256"
                         )
-                        resp = Response("Authentication for %s successful" % (user._uid))
-                        resp.set_cookie(current_app.config["JWT_TOKEN_NAME"], 
+                        # Return JSON response with cookie
+                        is_production = not (request.host.startswith('localhost') or request.host.startswith('127.0.0.1'))
+                        
+                        # Create JSON response
+                        response_data = {
+                            "message": f"Authentication for {user._uid} successful",
+                            "user": {
+                                "uid": user._uid,
+                                "name": user.name,
+                                "role": user.role
+                            }
+                        }
+                        resp = jsonify(response_data)
+                        
+                        # Set cookie
+                        if is_production:
+                            resp.set_cookie(
+                                current_app.config["JWT_TOKEN_NAME"],
                                 token,
-                                max_age=3600,
+                                max_age=43200,  # 12 hours in seconds
                                 secure=True,
                                 httponly=True,
                                 path='/',
-                                samesite='None'  # This is the key part for cross-site requests
-
-                                            # domain="frontend.com"
-                         )
-                        print(token)
+                                samesite='None'
+                            )
+                        else:
+                            resp.set_cookie(
+                                current_app.config["JWT_TOKEN_NAME"],
+                                token,
+                                max_age=43200,  # 12 hours in seconds
+                                secure=False,
+                                httponly=False,  # Set to True for more security if JS access not needed
+                                path='/',
+                                samesite='Lax'
+                            )
+                        print(f"Token set: {token}")
                         return resp 
                     except Exception as e:
                         return {
@@ -400,15 +424,27 @@ class UserAPI:
                 
                 # Prepare a response indicating the token has been invalidated
                 resp = Response("Token invalidated successfully")
-                resp.set_cookie(
-                    current_app.config["JWT_TOKEN_NAME"], 
-                    token,
-                    max_age=0,  # Immediately expire the cookie
-                    secure=True,
-                    httponly=True,
-                    path='/',
-                    samesite='None'
-                )
+                is_production = not (request.host.startswith('localhost') or request.host.startswith('127.0.0.1'))
+                if is_production:
+                    resp.set_cookie(
+                        current_app.config["JWT_TOKEN_NAME"],
+                        token,
+                        max_age=0,  # Immediately expire the cookie
+                        secure=True,
+                        httponly=True,
+                        path='/',
+                        samesite='None'
+                    )
+                else:
+                    resp.set_cookie(
+                        current_app.config["JWT_TOKEN_NAME"],
+                        token,
+                        max_age=0,  # Immediately expire the cookie
+                        secure=False,
+                        httponly=False,  # Set to True for more security if JS access not needed
+                        path='/',
+                        samesite='Lax'
+                    )
                 return resp
             except Exception as e:
                 return {
@@ -526,14 +562,14 @@ class UserAPI:
         """
         School data API operations
         """
-        
+
         @token_required()
         def get(self):
             """
             Get the school data for a user.
             """
             current_user = g.current_user
-            
+
             # If request includes a UID parameter and user is admin, get that user's school data
             uid = request.args.get('uid')
             if current_user.role == 'Admin' and uid:
@@ -542,9 +578,9 @@ class UserAPI:
                     return {'message': f'User {uid} not found'}, 404
             else:
                 user = current_user  # Get the current user's school data
-                
+
             return jsonify({'uid': user.uid, 'school': user.school})
-        
+
         @token_required()
         def post(self):
             """
@@ -552,7 +588,7 @@ class UserAPI:
             """
             current_user = g.current_user
             body = request.get_json()
-            
+
             # Determine which user's school data to update
             uid = body.get('uid')
             if current_user.role == 'Admin' and uid:
@@ -564,22 +600,89 @@ class UserAPI:
                 if uid and uid != current_user.uid and current_user.role != 'Admin':
                     return {'message': 'Permission denied: You can only update your own school data'}, 403
                 user = current_user
-            
+
             # Get the school data from the request
             school = body.get('school')
             if not school:
                 return {'message': 'School data is missing'}, 400
-                
+
             # Update the user's school data
             user.update({'school': school})
-            
+
             return jsonify({'message': 'School data updated successfully', 'uid': user.uid, 'school': user.school})
+
+    class _GuestCRUD(Resource):
+        """
+        Guest user API operations - simplified signup without GitHub validation
+        """
+
+        def post(self):
+            """
+            Create a new guest user account.
+
+            Accepts only username (uid) and password. Auto-generates required fields.
+            No GitHub validation required for guest accounts.
+
+            Returns:
+                JSON response with the created user details or an error message.
+            """
+            # Read data from json body
+            body = request.get_json()
+
+            # Validate uid (username)
+            uid = body.get('uid')
+            if uid is None or len(uid) < 2:
+                return {'message': 'Username is missing, or is less than 2 characters'}, 400
+
+            # Validate password (relaxed requirement for guests)
+            password = body.get('password')
+            if password is None or len(password) < 2:
+                return {'message': 'Password is missing, or is less than 2 characters'}, 400
+
+            # Auto-generate required fields for guest accounts
+            name = f"Guest_{uid}"
+            email = "?"
+            sid = "?"
+            school = "?"
+
+            # Create User object with auto-generated name
+            user_obj = User(name=name, uid=uid, password=password)
+
+            # Build cleaned body with all fields filled
+            cleaned_body = {
+                'name': name,
+                'uid': uid,
+                'password': password,
+                'email': email,
+                'sid': sid,
+                'school': school,
+                'kasm_server_needed': False
+            }
+
+            # Create the guest user (skip GitHub validation)
+            try:
+                user = user_obj.create(cleaned_body)
+
+                if not user:
+                    # Check if user was actually created in database
+                    db_user = User.query.filter_by(_uid=uid).first()
+                    if db_user:
+                        return jsonify(db_user.read())
+                    else:
+                        return {'message': f'Failed to create guest account for {uid}, username may already exist'}, 400
+
+                # Return the created user details
+                return jsonify(user.read())
+
+            except Exception as e:
+                return {'message': f'Error creating guest user: {str(e)}'}, 500
 
     # building RESTapi endpoint
     api.add_resource(_ID, '/id')
     api.add_resource(_BULK, '/users')
     api.add_resource(_CRUD, '/user')
-    api.add_resource(_Section, '/user/section') 
+    api.add_resource(_GuestCRUD, '/user/guest')
+    api.add_resource(_Section, '/user/section')
     api.add_resource(_Security, '/authenticate')
     api.add_resource(_GradeData, '/grade_data')
     api.add_resource(_APExam, '/apexam')

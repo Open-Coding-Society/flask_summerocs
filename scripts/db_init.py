@@ -30,6 +30,7 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 # Import application object
 from main import app, db, initUsers
+from model.microblog import init_microblogs
 
 # Backup the old database
 def backup_database(db_uri, backup_uri):
@@ -84,6 +85,7 @@ def main():
             
             # Add default test data 
             initUsers() # test data
+            init_microblogs() # microblog test data
             
     except Exception as e:
         print(f"An error occurred: {e}")

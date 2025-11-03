@@ -15,14 +15,19 @@ from api.jwt_authorize import token_required
 from __init__ import app, db, login_manager  # Key Flask objects 
 # API endpoints
 from api.user import user_api 
+from api.python_exec_api import python_exec_api
+from api.javascript_exec_api import javascript_exec_api
 from api.section import section_api
 from api.pfp import pfp_api
 from api.stock import stock_api
 from api.analytics import analytics_api
 from api.student import student_api
 from api.groq_api import groq_api
+from api.gemini_api import gemini_api
+from api.microblog_api import microblog_api
 from api.classroom_api import classroom_api
 from hacks.joke import joke_api  # Import the joke API blueprint
+from api.post import post_api  # Import the social media post API
 #from api.announcement import announcement_api ##temporary revert
 
 # database Initialization functions
@@ -36,6 +41,8 @@ from api.study import study_api
 from api.feedback_api import feedback_api
 from model.study import Study, initStudies
 from model.classroom import Classroom
+from model.post import Post, init_posts
+from model.microblog import MicroBlog, Topic, init_microblogs
 from hacks.jokes import initJokes 
 # from model.announcement import Announcement ##temporary revert
 
@@ -54,11 +61,15 @@ app.config['KASM_API_KEY_SECRET'] = os.getenv('KASM_API_KEY_SECRET')
 
 
 # register URIs for api endpoints
+app.register_blueprint(python_exec_api)
+app.register_blueprint(javascript_exec_api)
 app.register_blueprint(user_api)
 app.register_blueprint(section_api)
 app.register_blueprint(pfp_api) 
 app.register_blueprint(stock_api)
 app.register_blueprint(groq_api)
+app.register_blueprint(gemini_api)
+app.register_blueprint(microblog_api)
 
 app.register_blueprint(analytics_api)
 app.register_blueprint(student_api)
@@ -67,6 +78,7 @@ app.register_blueprint(study_api)
 app.register_blueprint(classroom_api)
 app.register_blueprint(feedback_api)
 app.register_blueprint(joke_api)  # Register the joke API blueprint
+app.register_blueprint(post_api)  # Register the social media post API
 # app.register_blueprint(announcement_api) ##temporary revert
 
 # Tell Flask-Login the view function name of your login route
@@ -293,14 +305,15 @@ custom_cli = AppGroup('custom', help='Custom commands')
 @custom_cli.command('generate_data')
 def generate_data():
     initUsers()
+    init_microblogs()
 
 # Register the custom command group with the Flask application
 app.cli.add_command(custom_cli)
         
 # this runs the flask application on the development server
 if __name__ == "__main__":
-    initJokes()  # Initialize jokes data
-    # change name for testing
-    app.run(debug=True, host="0.0.0.0", port="8587")
-    
-
+    initJokes() # in memory initialization of jokes
+    host = "0.0.0.0"
+    port = 8587
+    print(f"** Server running: http://localhost:{port}")  # Pretty link
+    app.run(debug=True, host=host, port=port, use_reloader=False)
