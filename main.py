@@ -314,6 +314,6 @@ app.cli.add_command(custom_cli)
 if __name__ == "__main__":
     initJokes() # in memory initialization of jokes
     host = "0.0.0.0"
-    port = 8587
+    port = app.config['FLASK_PORT']
     print(f"** Server running: http://localhost:{port}")  # Pretty link
     app.run(debug=True, host=host, port=port, use_reloader=False)

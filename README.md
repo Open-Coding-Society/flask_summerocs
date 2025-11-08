@@ -60,7 +60,9 @@ pip install -r requirements.txt
   - Make a local `.env` file in root of project to contain your secret passwords
 
   ```shell
-  # Reset password for users who forget their password
+  # Port configuration
+  FLASK_PORT=8001
+  # Admin user reset password 
   DEFAULT_PASSWORD='123Qwerty!'
   # Admin user defaults
   ADMIN_USER='Thomas Edison'
