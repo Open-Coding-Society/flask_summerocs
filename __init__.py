@@ -104,6 +104,10 @@ app.config['UPLOAD_EXTENSIONS'] = ['.jpg', '.png', '.gif']  # supported file typ
 app.config['UPLOAD_FOLDER'] = os.path.join(app.instance_path, 'uploads')
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
+# Data folder for shared file-based storage
+app.config['DATA_FOLDER'] = os.path.join(app.instance_path, 'data')
+os.makedirs(app.config['DATA_FOLDER'], exist_ok=True)
+
 
 # GITHUB settings
 app.config['GITHUB_API_URL'] = 'https://api.github.com'

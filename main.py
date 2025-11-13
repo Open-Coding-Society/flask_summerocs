@@ -81,8 +81,9 @@ app.register_blueprint(joke_api)  # Register the joke API blueprint
 app.register_blueprint(post_api)  # Register the social media post API
 # app.register_blueprint(announcement_api) ##temporary revert
 
-# Memory initialization
-initJokes()
+# Jokes file initialization
+with app.app_context():
+    initJokes()
 
 # Tell Flask-Login the view function name of your login route
 login_manager.login_view = "login"
