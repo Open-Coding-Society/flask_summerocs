@@ -2,7 +2,7 @@ import jwt
 from flask import Blueprint, app, request, jsonify, current_app, Response, g
 from flask_restful import Api, Resource # used for REST API building
 from datetime import datetime
-from __init__ import app
+from __init__ import app, db
 from api.jwt_authorize import token_required
 from model.user import User
 from model.github import GitHubUser
@@ -766,7 +766,7 @@ class UserAPI:
         def delete(self):
             """Remove provided classes from the user's class list; if none provided, clear all."""
             current_user = g.current_user
-            body = request.get_json() or {}
+            body = request.get_json(silent=True) or {}
             uid = body.get('uid')
             if current_user.role == 'Admin' and uid:
                 user = User.query.filter_by(_uid=uid).first()
@@ -776,9 +776,21 @@ class UserAPI:
                 user = current_user
 
             classes = body.get('class') or body.get('classes')
+            if not classes:
+                # try query params
+                qcls = request.args.get('class') or request.args.get('classes')
+                if qcls:
+                    classes = [c.strip() for c in qcls.split(',') if c.strip()]
+
+            # If classes is None (explicitly omitted), clear all classes
             if classes is None:
-                # Clear all classes
-                user.update({'class': []})
+                try:
+                    user._class = []
+                    db.session.add(user)
+                    db.session.commit()
+                except Exception as e:
+                    db.session.rollback()
+                    return {'message': 'Failed to clear classes', 'error': str(e)}, 500
                 return {'message': f'Cleared classes for {user.uid}'}, 200
 
             if isinstance(classes, str):
@@ -786,7 +798,14 @@ class UserAPI:
 
             existing = user._class if getattr(user, '_class', None) is not None else []
             remaining = [c for c in existing if c not in classes]
-            user.update({'class': remaining})
+            try:
+                user._class = remaining
+                db.session.add(user)
+                db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                return {'message': 'Failed to update classes', 'error': str(e)}, 500
+
             return jsonify({'uid': user.uid, 'class': user._class})
 
     api.add_resource(_Class, '/user/class')
