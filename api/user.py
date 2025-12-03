@@ -697,9 +697,8 @@ class UserAPI:
     class _Class(Resource):
         """Manage the user's `class` list (e.g. CSSE, CSP, CSA).
         GET: return classes
-        POST: add classes
+        POST: add or remove classes (use 'action' parameter: 'add', 'remove', or 'clear')
         PUT: replace classes
-        DELETE: remove classes or clear all
         """
 
         @token_required()
@@ -717,7 +716,7 @@ class UserAPI:
 
         @token_required()
         def post(self):
-            """Add one or more classes to the user's class list."""
+            """Add, remove, or clear classes from the user's class list based on action parameter."""
             current_user = g.current_user
             body = request.get_json() or {}
             uid = body.get('uid')
@@ -728,17 +727,36 @@ class UserAPI:
             else:
                 user = current_user
 
+            action = body.get('action', 'add')  # Default to 'add' for backward compatibility
+            
+            if action == 'clear':
+                # Clear all classes
+                user.update({'class': []})
+                return {'message': f'Cleared classes for {user.uid}'}, 200
+            
             classes = body.get('class') or body.get('classes')
             if not classes:
-                return {'message': 'No classes provided to add'}, 400
+                return {'message': f'No classes provided to {action}'}, 400
 
             if isinstance(classes, str):
                 classes = [classes]
 
             existing = user._class if getattr(user, '_class', None) is not None else []
-            new_list = existing + [c for c in classes if c not in existing]
-            user.update({'class': new_list})
-            return jsonify({'uid': user.uid, 'class': user._class})
+            
+            if action == 'add':
+                # Add classes (merge without duplicates)
+                new_list = existing + [c for c in classes if c not in existing]
+                user.update({'class': new_list})
+                return jsonify({'uid': user.uid, 'class': user._class})
+            
+            elif action == 'remove':
+                # Remove specified classes
+                remaining = [c for c in existing if c not in classes]
+                user.update({'class': remaining})
+                return jsonify({'uid': user.uid, 'class': user._class})
+            
+            else:
+                return {'message': f'Invalid action: {action}. Use "add", "remove", or "clear"'}, 400
 
         @token_required()
         def put(self):
@@ -762,50 +780,6 @@ class UserAPI:
             user.update({'class': classes})
             return jsonify({'uid': user.uid, 'class': user._class})
 
-        @token_required()
-        def delete(self):
-            """Remove provided classes from the user's class list; if none provided, clear all."""
-            current_user = g.current_user
-            body = request.get_json(silent=True) or {}
-            uid = body.get('uid')
-            if current_user.role == 'Admin' and uid:
-                user = User.query.filter_by(_uid=uid).first()
-                if not user:
-                    return {'message': f'User {uid} not found'}, 404
-            else:
-                user = current_user
 
-            classes = body.get('class') or body.get('classes')
-            if not classes:
-                # try query params
-                qcls = request.args.get('class') or request.args.get('classes')
-                if qcls:
-                    classes = [c.strip() for c in qcls.split(',') if c.strip()]
-
-            # If classes is None (explicitly omitted), clear all classes
-            if classes is None:
-                try:
-                    user._class = []
-                    db.session.add(user)
-                    db.session.commit()
-                except Exception as e:
-                    db.session.rollback()
-                    return {'message': 'Failed to clear classes', 'error': str(e)}, 500
-                return {'message': f'Cleared classes for {user.uid}'}, 200
-
-            if isinstance(classes, str):
-                classes = [classes]
-
-            existing = user._class if getattr(user, '_class', None) is not None else []
-            remaining = [c for c in existing if c not in classes]
-            try:
-                user._class = remaining
-                db.session.add(user)
-                db.session.commit()
-            except Exception as e:
-                db.session.rollback()
-                return {'message': 'Failed to update classes', 'error': str(e)}, 500
-
-            return jsonify({'uid': user.uid, 'class': user._class})
 
     api.add_resource(_Class, '/user/class')
