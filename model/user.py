@@ -155,6 +155,7 @@ class User(db.Model, UserMixin):
     kasm_server_needed = db.Column(db.Boolean, default=False)
     _grade_data = db.Column(db.JSON, unique=False, nullable=True)
     _ap_exam = db.Column(db.JSON, unique=False, nullable=True)
+    _class = db.Column(db.JSON, unique=False, nullable=True)
     _school = db.Column(db.String(255), default="Unknown", nullable=True)
 
     # Define many-to-many relationship with Section model through UserSection table 
@@ -165,7 +166,7 @@ class User(db.Model, UserMixin):
     # Define one-to-one relationship with StockUser model
     stock_user = db.relationship("StockUser", backref=db.backref("users", cascade="all"), lazy=True, uselist=False)
 
-    def __init__(self, name, uid, password=app.config["DEFAULT_PASSWORD"], kasm_server_needed=False, role="User", pfp='', grade_data=None, ap_exam=None, school="Unknown", sid=None):
+    def __init__(self, name, uid, password=app.config["DEFAULT_PASSWORD"], kasm_server_needed=False, role="User", pfp='', grade_data=None, ap_exam=None, school="Unknown", sid=None, classes=None):
         self._name = name
         self._uid = uid
         self._email = "?"
@@ -176,6 +177,9 @@ class User(db.Model, UserMixin):
         self._pfp = pfp
         self._grade_data = grade_data if grade_data else {}
         self._ap_exam = ap_exam if ap_exam else {}
+        # _class stores a list of class abbreviations the user belongs to (e.g. CSSE, CSP, CSA)
+        # keep it as a JSON column in the DB
+        self._class = classes if classes is not None else []
         self._school = school
 
     # UserMixin/Flask-Login requires a get_id method to return the id as a string
@@ -357,6 +361,7 @@ class User(db.Model, UserMixin):
             "sid": self.sid,
             "role": self.role,
             "pfp": self.pfp,
+            "class": self._class if self._class is not None else [],
             "kasm_server_needed": self.kasm_server_needed,
             "grade_data": self.grade_data,
             "ap_exam": self.ap_exam,
@@ -382,6 +387,7 @@ class User(db.Model, UserMixin):
         kasm_server_needed = inputs.get("kasm_server_needed", None)
         grade_data = inputs.get("grade_data", None)
         ap_exam = inputs.get("ap_exam", None)
+        class_list = inputs.get("class", None) or inputs.get("_class", None)
         school = inputs.get("school", None)
         # States before update
         old_uid = self.uid
@@ -406,6 +412,12 @@ class User(db.Model, UserMixin):
             self.grade_data = grade_data
         if ap_exam is not None:
             self.ap_exam = ap_exam
+        if class_list is not None:
+            # Ensure class_list is a list; accept a single string as convenience
+            if isinstance(class_list, str):
+                self._class = [class_list]
+            else:
+                self._class = class_list
         if school is not None:
             self.school = school
 

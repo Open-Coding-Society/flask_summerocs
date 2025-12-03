@@ -471,10 +471,11 @@ window.switchTab = function(tab) {
   }
 };
 
-// Check authentication
 async function checkAuth() {
   try {
-    const response = await fetch(`${javaURI}/api/id`, fetchOptions);
+    const response = await fetch(`${javaURI}/api/id`, {
+      credentials: 'include'
+    });
     isLoggedIn = response.ok;
     return response.ok;
   } catch (error) {
