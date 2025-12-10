@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Host Info</title>
+  <style>
+    body{font-family:Inter,system-ui,Segoe UI,Arial,sans-serif;margin:18px;color:#111}
+    header{display:flex;align-items:center;justify-content:space-between}
+    h1{font-size:20px;margin:0}
+    .meta{margin:12px 0;color:#444}
+    table{border-collapse:collapse;width:100%;margin-top:12px}
+    th,td{padding:8px;border:1px solid #e6e6e6;text-align:left}
+    th{background:#f7f7f7}
+    .ok{color:green;font-weight:600}
+    .no{color:#c00;font-weight:600}
+    .raw{white-space:pre-wrap;font-family:monospace;background:#fafafa;padding:8px;border-radius:6px;border:1px solid #eee}
+    details{margin-top:6px}
+    button{padding:8px 10px;border-radius:6px;border:1px solid #ccc;background:#fff;cursor:pointer}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Host Diagnostics</h1>
+    <div>
+      <button id="refresh">Refresh</button>
+      <button id="copyJson">Copy JSON</button>
+    </div>
+  </header>
+
+  <p class="meta">This page fetches `/api/host` and shows parsed versions and raw outputs for tools.</p>
+
+  <section id="system">
+    <strong>System</strong>
+    <div id="sysmeta"></div>
+  </section>
+
+  <section id="checks">
+    <strong>Checks</strong>
+    <div id="checksContainer"></div>
+  </section>
+
+  <script>
+    const refreshBtn = document.getElementById('refresh');
+    const copyBtn = document.getElementById('copyJson');
+    const sysmeta = document.getElementById('sysmeta');
+    const checksContainer = document.getElementById('checksContainer');
+
+    async function fetchData(){
+      checksContainer.innerHTML = 'Loading...';
+      try{
+        const res = await fetch('/api/host');
+        if(!res.ok) throw new Error('Network error: '+res.status);
+        const data = await res.json();
+        render(data);
+        return data;
+      }catch(err){
+        checksContainer.innerHTML = '<div style="color:#c00">Error fetching data: '+err.message+'</div>';
+      }
+    }
+
+    function render(d){
+      sysmeta.innerHTML = `OS: <strong>${escapeHtml(d['OS']||'')}</strong> — Release: ${escapeHtml(d['OS Release']||'')} — Arch: ${escapeHtml(d['Architecture']||'')}`;
+
+      const checks = d.checks || d;
+      // If host_data used flat mapping, handle both
+      let keys = Object.keys(checks).filter(k => k !== 'OS' && k !== 'OS Release' && k !== 'Architecture' && k !== 'Python Executable Path');
+
+      // If checks is object mapping of names -> info
+      if (d.checks && typeof d.checks === 'object'){
+        keys = Object.keys(d).filter(k=>!['OS','OS Release','OS Version','Architecture','Python Executable Path','checks'].includes(k));
+      }
+
+      // Build table
+      let html = '<table><thead><tr><th>Tool</th><th>Installed</th><th>Version</th><th>Extra</th></tr></thead><tbody>';
+
+      // iterate over known order if available
+      const preferOrder = ['python','pip','ruby','bundler','gem','jupyter','jupyter_kernelspecs','git','git_user_name','git_user_email','brew','xcode_select','uname'];
+      const allKeys = Array.from(new Set([...preferOrder, ...Object.keys(d.checks||d).filter(Boolean)]));
+
+      for (const k of allKeys){
+        const info = (d[k] !== undefined) ? d[k] : (d.checks && d.checks[k] ? d.checks[k] : null);
+        if(!info) continue;
+        const installed = info.installed ? '<span class="ok">Yes</span>' : '<span class="no">No</span>';
+        const version = info.version || info.value || '';
+        const raw = info.raw || info.value || info.stdout || '';
+        html += `<tr><td>${escapeHtml(k)}</td><td>${installed}</td><td>${escapeHtml(String(version||''))}</td><td>`;
+        if(raw){
+          html += `<details><summary>View raw</summary><div class="raw">${escapeHtml(raw)}</div></details>`;
+        } else {
+          html += '-';
+        }
+        html += `</td></tr>`;
+      }
+
+      html += '</tbody></table>';
+      checksContainer.innerHTML = html;
+
+      // attach copy button behaviour
+      copyBtn.onclick = ()=>{
+        navigator.clipboard.writeText(JSON.stringify(d, null, 2)).then(()=>{
+          copyBtn.textContent = 'Copied!';
+          setTimeout(()=>copyBtn.textContent='Copy JSON',1200);
+        });
+      };
+    }
+
+    function escapeHtml(str){
+      if(!str) return '';
+      return String(str)
+        .replace(/&/g,'&amp;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;')
+        .replace(/'/g,'&#039;');
+    }
+
+    refreshBtn.onclick = fetchData;
+
+    // initial
+    fetchData();
+  </script>
+</body>
+</html>
