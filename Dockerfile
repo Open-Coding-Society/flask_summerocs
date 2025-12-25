@@ -6,7 +6,9 @@ WORKDIR /app
 
 # Install system dependencies and clean up apt cache
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    git && \
+    git \
+    nodejs \
+    npm && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Copy application code into the container
