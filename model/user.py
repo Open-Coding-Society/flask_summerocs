@@ -10,8 +10,6 @@ import json
 from __init__ import app, db
 from model.github import GitHubUser
 from model.kasm import KasmUser
-from model.stocks import StockUser
-
 
 """ Helper Functions """
 
@@ -163,9 +161,6 @@ class User(db.Model, UserMixin):
     sections = db.relationship('Section', secondary=UserSection.__table__, lazy='subquery',
                                backref=db.backref('user_sections_rel', lazy=True, viewonly=True), overlaps="user_sections_rel,section,section_users_rel,user,users")
     
-    # Define one-to-one relationship with StockUser model
-    stock_user = db.relationship("StockUser", backref=db.backref("users", cascade="all"), lazy=True, uselist=False)
-
     def __init__(self, name, uid, password=app.config["DEFAULT_PASSWORD"], kasm_server_needed=False, role="User", pfp='', grade_data=None, ap_exam=None, school="Unknown", sid=None, classes=None):
         self._name = name
         self._uid = uid
@@ -427,21 +422,26 @@ class User(db.Model, UserMixin):
                 self.set_email()
 
         # Make a KasmUser object to interact with the Kasm API
-        kasm_user = KasmUser()
+        # Wrap in try-except to ensure db.session.commit() occurs even if Kasm operations fail
+        try:
+            kasm_user = KasmUser()
 
-        # Update Kasm server group membership if needed
-        if self.kasm_server_needed:
-            # UID has changed, delete old Kasm user if it exists
-            if old_uid != self.uid:
-                kasm_user.delete(old_uid)
-            # Create or update the user in Kasm, including a password
-            kasm_user.post(self.name, self.uid, password if password else app.config["DEFAULT_PASSWORD"])
-            # User is transtioning from non-Kasm to Kasm user, thus it requires posting all groups to Kasm
-            if not old_kasm_server_needed:
-                kasm_user.post_groups(self.uid, [section.abbreviation for section in self.sections])
-        # User is transitioning from Kasm user to non-Kasm user, thus it requires cleanup of defunct Kasm user
-        elif old_kasm_server_needed:
-            kasm_user.delete(self.uid)
+            # Update Kasm server group membership if needed
+            if self.kasm_server_needed:
+                # UID has changed, delete old Kasm user if it exists
+                if old_uid != self.uid:
+                    kasm_user.delete(old_uid)
+                # Create or update the user in Kasm, including a password
+                kasm_user.post(self.name, self.uid, password if password else app.config["DEFAULT_PASSWORD"])
+                # User is transtioning from non-Kasm to Kasm user, thus it requires posting all groups to Kasm
+                if not old_kasm_server_needed:
+                    kasm_user.post_groups(self.uid, [section.abbreviation for section in self.sections])
+            # User is transitioning from Kasm user to non-Kasm user, thus it requires cleanup of defunct Kasm user
+            elif old_kasm_server_needed:
+                kasm_user.delete(self.uid)
+        except Exception as e:
+            # Log the error but continue to db.session.commit()
+            print(f"Kasm API error for user {self.uid}: {e}")
 
         try:
             db.session.commit()
@@ -608,23 +608,6 @@ class User(db.Model, UserMixin):
             if os.path.exists(old_path):
                 os.rename(old_path, new_path)
 
-    def add_stockuser(self):
-        """
-        Add 1-to-1 stock user to the user's record. 
-        """
-        if not self.stock_user:
-            self.stock_user = StockUser(uid=self._uid, stockmoney=100000)
-            db.session.commit()
-        return self 
-            
-    def read_stockuser(self):
-        """
-        Read the stock user daata associated with the user.
-        """
-        if self.stock_user:
-            return self.stock_user.read()
-        return None
-    
 """Database Creation and Testing """
 
 # Builds working data set for testing
