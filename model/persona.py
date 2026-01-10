@@ -216,7 +216,7 @@ def initPersonas():
         
         # Musician Persona
         s2 = Persona(
-            _alias='melody',
+            _alias='amedaus',
             _category='social',
             _title='Musician',
             _bio='Music is my language and my escape. I express emotions through sound, whether creating beats, playing instruments, or curating the perfect playlist. Music connects me to culture, identity, and community in ways words cannot.',
@@ -244,7 +244,7 @@ def initPersonas():
         
         # Explorer Persona
         s4 = Persona(
-            _alias='wanderlust',
+            _alias='rover',
             _category='social',
             _title='Explorer',
             _bio='I crave new experiences, cultures, and perspectives. Travel and adventure feed my curiosity about the world. Even locally, I seek hidden gems, try new foods, and collect stories that broaden my understanding of life.',
@@ -258,60 +258,60 @@ def initPersonas():
         
         """Achievement-oriented personas for goal-driven matching"""
         
-        # Builder Persona
+        # Scholar Persona
         a1 = Persona(
-            _alias='maker',
+            _alias='lex',
             _category='achievement',
-            _title='Builder',
-            _bio='I create tangible results. Whether coding projects, crafts, or engineering solutions, I love bringing ideas to life. My hands-on approach and practical mindset drive me to build things that work and matter.',
-            _archetype=['Practical', 'Resourceful', 'Hands-on'],
-            _personality_type=['Creator', 'Implementer'],
-            _says=['Let me prototype that idea.', 'I built this from scratch.', 'How can we make this work?'],
-            _thinks=['The best learning happens by doing.', 'Shipping is better than perfection.'],
-            _feels=['Satisfied seeing projects come to completion.', 'Frustrated by endless planning without action.'],
-            _does=['Jumps into implementation quickly.', 'Solves problems with creative workarounds.', 'Shares builds and creations with community.']
-        )
-        
-        # Innovator Persona
-        a2 = Persona(
-            _alias='spark',
-            _category='achievement',
-            _title='Innovator',
-            _bio='I see possibilities everywhere and challenge the status quo. Innovation drives me—finding better ways, asking "what if," and connecting unexpected ideas. I\'m energized by brainstorming and pushing boundaries.',
-            _archetype=['Visionary', 'Bold', 'Unconventional'],
-            _personality_type=['Ideator', 'Disruptor'],
-            _says=['What if we tried this instead?', 'There has to be a better way.', 'Let\'s think outside the box.'],
-            _thinks=['Innovation requires risk and experimentation.', 'Traditional approaches often miss opportunities.'],
-            _feels=['Excited by novel ideas and emerging trends.', 'Constrained by rigid rules or conventional thinking.'],
-            _does=['Researches cutting-edge technologies and methods.', 'Proposes creative solutions to old problems.', 'Experiments fearlessly, learning from failures.']
+            _title='Scholar',
+            _bio='I am driven by academic excellence and preparing for my future. AP exams, SAT/ACT scores, and college admissions define my success. I take challenging courses, maintain a high GPA, and constantly think about how my achievements will shape my college applications and career path.',
+            _archetype=['Disciplined', 'Goal-oriented', 'Achievement-focused'],
+            _personality_type=['Academic', 'Future-minded'],
+            _says=['What AP classes are you taking?', 'I need a 5 on this exam.', 'This will look good on my college application.'],
+            _thinks=['Every grade matters for my transcript.', 'I need to stand out in the college admissions process.', 'Test scores can open doors to better opportunities.'],
+            _feels=['Anxious about test performance and college acceptance.', 'Proud when academic hard work pays off.', 'Pressure to maintain excellence across all subjects.'],
+            _does=['Studies rigorously for AP exams and standardized tests.', 'Researches colleges and scholarship opportunities constantly.', 'Takes the most challenging course load possible.', 'Seeks academic recognition through honor societies and awards.']
         )
         
         # Competitor Persona
-        a3 = Persona(
-            _alias='victor',
+        a2 = Persona(
+            _alias='nikola',
             _category='achievement',
             _title='Competitor',
-            _bio='I\'m motivated by winning and being the best. Competition brings out my peak performance—I set ambitious goals, track rankings, and push myself to excel. Recognition and achievement fuel my drive.',
-            _archetype=['Ambitious', 'Results-driven', 'Tenacious'],
-            _personality_type=['Achiever', 'Champion'],
-            _says=['I\'m going for first place.', 'Let\'s see who finishes first.', 'I don\'t settle for average.'],
-            _thinks=['Competition reveals true potential.', 'Metrics and rankings show real progress.'],
-            _feels=['Energized by challenges and high stakes.', 'Disappointed when effort doesn\'t yield top results.'],
-            _does=['Enters competitions, hackathons, and contests.', 'Benchmarks performance against peers.', 'Celebrates wins and analyzes losses for improvement.']
+            _bio='I thrive in competitive environments and love the rush of tournaments and competitions. Whether it\'s robotics, CyberPatriots, DECA, or hackathons, I\'m driven by the challenge of testing my skills against others. Winning trophies, medals, and recognition fuels my passion.',
+            _archetype=['Competitive', 'Team-focused', 'Strategic'],
+            _personality_type=['Winner', 'Performer'],
+            _says=['Our team is going to nationals!', 'We placed first in regionals!', 'I want to compete at the highest level.'],
+            _thinks=['Competition brings out my best performance.', 'Team victories are sweeter than individual wins.', 'Preparation and practice lead to championship results.'],
+            _feels=['Energized by competition pressure and high stakes.', 'Proud representing my school at tournaments.', 'Driven to improve after every competition.'],
+            _does=['Joins competitive clubs like robotics, CyberPatriots, DECA, Science Olympiad.', 'Practices intensely before competitions and tournaments.', 'Analyzes competitor strategies to gain an edge.', 'Celebrates team victories and learns from defeats.']
         )
         
-        # Mentor Persona
-        a4 = Persona(
-            _alias='sage',
+        # Builder Persona
+        a3 = Persona(
+            _alias='isaac',
             _category='achievement',
-            _title='Mentor',
-            _bio='I find purpose in helping others succeed. Sharing knowledge, guiding peers, and seeing others grow gives me deep satisfaction. My achievement is measured by the impact I have on my community.',
-            _archetype=['Supportive', 'Wise', 'Patient'],
-            _personality_type=['Guide', 'Nurturer'],
-            _says=['Let me help you with that.', 'Have you considered this approach?', 'Your success is my success.'],
-            _thinks=['Teaching reinforces my own understanding.', 'Lifting others elevates the whole community.'],
-            _feels=['Fulfilled when helping someone overcome obstacles.', 'Proud seeing mentees achieve their goals.'],
-            _does=['Offers tutoring and peer support regularly.', 'Creates guides and resources for others.', 'Listens actively and provides thoughtful feedback.']
+            _title='Builder',
+            _bio='I create tangible things that work and matter. Whether coding apps, building robots, designing products, or crafting solutions, I love bringing ideas to life. My hands-on approach and maker mindset drive me to build, test, and iterate until it works perfectly.',
+            _archetype=['Practical', 'Hands-on', 'Creative'],
+            _personality_type=['Maker', 'Engineer'],
+            _says=['Let me build a prototype.', 'I can make that work.', 'Look what I created!'],
+            _thinks=['Building is the best way to learn.', 'Real projects are more valuable than theoretical work.', 'Seeing my creations in action is the ultimate reward.'],
+            _feels=['Satisfied when projects come to life.', 'Excited by technical challenges and problem-solving.', 'Frustrated when stuck on implementation details.'],
+            _does=['Builds projects, apps, robots, and physical creations.', 'Joins maker clubs, robotics teams, and engineering groups.', 'Shares creations on GitHub, maker fairs, and competitions.', 'Learns new tools and technologies through hands-on experimentation.']
+        )
+        
+        # Ambassador Persona
+        a4 = Persona(
+            _alias='avery',
+            _category='achievement',
+            _title='Ambassador',
+            _bio='I find purpose in serving my community and making a difference beyond myself. Whether tutoring younger students, advocating for social justice, volunteering at elementary schools, or leading service projects, I measure success by the positive impact I create in others\' lives.',
+            _archetype=['Service-oriented', 'Compassionate', 'Leader'],
+            _personality_type=['Advocate', 'Mentor'],
+            _says=['How can we help our community?', 'I\'m tutoring elementary kids this weekend.', 'We need to make a difference.'],
+            _thinks=['Service to others gives my life meaning.', 'Education and opportunity should be accessible to everyone.', 'Small acts of kindness create ripple effects.'],
+            _feels=['Fulfilled when helping others succeed and grow.', 'Passionate about social justice and equity issues.', 'Connected to community through service work.'],
+            _does=['Volunteers regularly at elementary schools or community centers.', 'Tutors and mentors younger students in STEM or other subjects.', 'Joins service clubs focused on social justice and community impact.', 'Organizes fundraisers, awareness campaigns, and service projects.']
         )
         
         """Fantasy superpower personas for aspirational matching"""
@@ -332,7 +332,7 @@ def initPersonas():
         
         # Strength Persona
         f2 = Persona(
-            _alias='titan',
+            _alias='parker',
             _category='fantasy',
             _title='Powerhouse',
             _bio='If I had a superpower, it would be super strength—the ability to tackle the hardest challenges, carry heavy loads, and power through obstacles. I value resilience, determination, and raw capability.',
@@ -346,7 +346,7 @@ def initPersonas():
         
         # Intelligence Persona
         f3 = Persona(
-            _alias='oracle',
+            _alias='merlin',
             _category='fantasy',
             _title='Mastermind',
             _bio='If I had a superpower, it would be super intelligence—solving complex problems, seeing patterns others miss, and mastering any subject. I value knowledge, strategy, and intellectual excellence.',
