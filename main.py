@@ -39,8 +39,9 @@ from api.study import study_api
 from api.feedback_api import feedback_api
 from model.study import Study, initStudies
 from model.classroom import Classroom
+from model.persona import Persona, initPersonas
 from model.post import Post, init_posts
-from model.microblog import MicroBlog, Topic, init_microblogs
+from model.microblog import MicroBlog, Topic, initMicroblogs
 from hacks.jokes import initJokes 
 # from model.announcement import Announcement ##temporary revert
 
@@ -306,7 +307,8 @@ custom_cli = AppGroup('custom', help='Custom commands')
 @custom_cli.command('generate_data')
 def generate_data():
     initUsers()
-    init_microblogs()
+    initMicroblogs()
+    initPersonas
 
 # Register the custom command group with the Flask application
 app.cli.add_command(custom_cli)

@@ -523,7 +523,7 @@ class Topic(db.Model):
 
 
 
-def init_microblogs():
+def initMicroblogs():
    """Initialize the microblogs and topics tables with sample data"""
    # Import here to avoid circular import
    from __init__ import app
