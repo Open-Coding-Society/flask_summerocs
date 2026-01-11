@@ -40,6 +40,14 @@ class UserPersona(db.Model):
         self.weight = weight
         self.selected_at = datetime.utcnow()
     
+    def read(self):
+        """Read user persona selection data."""
+        return {
+            'alias': self.persona.alias,
+            'weight': self.weight,
+            'selected_at': self.selected_at.isoformat() if self.selected_at else None
+        }
+    
     @staticmethod
     def calculate_team_score(user_personas_list):
         """
@@ -169,6 +177,10 @@ class Persona(db.Model):
         self._feels = _feels
         self._does = _does
 
+    @property
+    def alias(self):
+        return self._alias
+    
     @validates('_category')
     def validate_category(self, key, value):
         if value not in PERSONA_CATEGORIES:

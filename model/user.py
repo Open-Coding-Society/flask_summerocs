@@ -545,10 +545,7 @@ class User(db.Model, UserMixin):
         user_personas = UserPersona.query.filter_by(user_id=self.id).all()
         if user_personas:
             for user_persona in user_personas:
-                persona_data = user_persona.persona.read()
-                persona_data['weight'] = user_persona.weight
-                persona_data['selected_at'] = user_persona.selected_at.isoformat() if user_persona.selected_at else None
-                personas.append(persona_data)
+                personas.append(user_persona.read())
         return {"personas": personas}
     
     def update_section(self, section_data):
