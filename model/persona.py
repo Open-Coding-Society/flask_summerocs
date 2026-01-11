@@ -160,10 +160,7 @@ class Persona(db.Model):
     _bio = db.Column(db.Text, nullable=False)
     _archetype = db.Column(JSON, nullable=False)
     _personality_type = db.Column(JSON, nullable=True)
-    _says = db.Column(JSON, nullable=True)
-    _thinks = db.Column(JSON, nullable=True)
-    _feels = db.Column(JSON, nullable=True)
-    _does = db.Column(JSON, nullable=True)
+    _empathy_map = db.Column(JSON, nullable=True)  # Stores: {'says': [], 'thinks': [], 'feels': [], 'does': []}
     
     # Define many-to-many relationship with User model through UserPersona table
     # Note: User model should add this backref:
@@ -171,21 +168,33 @@ class Persona(db.Model):
     #                            backref=db.backref('users', lazy=True))
     
 
-    def __init__(self, _alias, _title, _bio, _archetype, _category, _personality_type=None, _says=None, _thinks=None, _feels=None, _does=None):
+    def __init__(self, _alias, _title, _bio, _archetype, _category, _personality_type=None, _empathy_map=None):
         self._alias = _alias
         self._title = _title
         self._bio = _bio
         self._archetype = _archetype
         self._category = _category
         self._personality_type = _personality_type
-        self._says = _says
-        self._thinks = _thinks
-        self._feels = _feels
-        self._does = _does
+        self._empathy_map = _empathy_map
 
     @property
     def alias(self):
         return self._alias
+    
+    def __getattr__(self, name):
+        """
+        Generic property accessor for empathy_map keys.
+        Allows dot notation access to any empathy_map field (e.g., persona.says, persona.thinks).
+        This is called only when the attribute is not found through normal lookup.
+        """
+        if name.startswith('_'):
+            # Avoid infinite recursion for private attributes
+            raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+        
+        if self._empathy_map and name in self._empathy_map:
+            return self._empathy_map[name]
+        
+        raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
     
     @validates('_category')
     def validate_category(self, key, value):
@@ -207,10 +216,7 @@ class Persona(db.Model):
             "bio": self._bio,
             "archetype": self._archetype,
             "personality_type": self._personality_type,
-            "says": self._says,
-            "thinks": self._thinks,
-            "feels": self._feels,
-            "does": self._does
+            "empathy_map": self._empathy_map
         }
 
 
@@ -232,27 +238,29 @@ def initPersonas():
             _bio='I am a driven CS student who enjoys individual work and tackling the hardest technical challenges. I am motivated by mastery and recognition, and often surprise others with exceptional problem-solving skills. I excel in individual assignments and competitions, but group work can be frustrating, especially when team members are less focused on code or schedules are unclear. Building trust and communication with peers is an ongoing challenge, but when I am engaged, I can elevate the whole project.',
             _archetype=['Introvert', 'Analytical', 'Independent'],
             _personality_type=['Ambitious', 'Focused'],
-            _says=[
-                'Look at this new feature I created.',
-                'I just want to ask you and be sure to get it right.',
-                "Those people can't help me, they don't understand themselves."
-            ],
-            _thinks=[
-                'Prefers not to seek help from students, perceiving it as a potential slowdown.',
-                'Secretly hopes to be a hero, one who makes the project exceptional.',
-                'Believes the teacher is a valuable resource, but also recognizes the importance of self-driven learning for unlimited potential.'
-            ],
-            _feels=[
-                'Values individual effort, but is open to building trust and communication with peers.',
-                'Often feels excluded due to language difficulties or social barriers.',
-                'Fears opening up or communicating with others or trusting they will complete tasks correctly.'
-            ],
-            _does=[
-                'Often wants to come in before or stay after class for preferred individual review or help with Teacher.',
-                "When properly engaged, often surprises others' expectations by solving cognitively challenging problems.",
-                'Typically does well on traditional assignments, like AP exams or practices.',
-                'Can loop or get frustrated on materials they have not been able to grasp, sometimes compounded by not reaching out to peers early.'
-            ]
+            _empathy_map={
+                'says': [
+                    'Look at this new feature I created.',
+                    'I just want to ask you and be sure to get it right.',
+                    "Those people can't help me, they don't understand themselves."
+                ],
+                'thinks': [
+                    'Prefers not to seek help from students, perceiving it as a potential slowdown.',
+                    'Secretly hopes to be a hero, one who makes the project exceptional.',
+                    'Believes the teacher is a valuable resource, but also recognizes the importance of self-driven learning for unlimited potential.'
+                ],
+                'feels': [
+                    'Values individual effort, but is open to building trust and communication with peers.',
+                    'Often feels excluded due to language difficulties or social barriers.',
+                    'Fears opening up or communicating with others or trusting they will complete tasks correctly.'
+                ],
+                'does': [
+                    'Often wants to come in before or stay after class for preferred individual review or help with Teacher.',
+                    "When properly engaged, often surprises others' expectations by solving cognitively challenging problems.",
+                    'Typically does well on traditional assignments, like AP exams or practices.',
+                    'Can loop or get frustrated on materials they have not been able to grasp, sometimes compounded by not reaching out to peers early.'
+                ]
+            }
         )
         
         # Scrummer Persona - Salem
@@ -263,25 +271,27 @@ def initPersonas():
             _bio='I am a collaborative learner who grows through teamwork and iteration. I enjoy working in teams, contributing to group success, and learning from others. Seeing my team each day makes me happy and excited to solve problems together. While I thrive in Agile environments, I sometimes find it challenging to show my unique contributions and can be unsure how my individual work impacts my grade, especially when groupthink makes it easy to blend in with the team.',
             _archetype=['Collaborative', 'Optimistic', 'Team-oriented'],
             _personality_type=['Agile', 'Growth Mindset'],
-            _says=[
-                'I like working in teams and collaborating with peers.',
-                "It is OK that we don't get things right as we have iteration opportunities."
-            ],
-            _thinks=[
-                'Believes in team and has a growth mindset.',
-                'Sometimes is unsure how their individual work impacts their grade in class.'
-            ],
-            _feels=[
-                'Thinks about solving issues together.',
-                'Hopes to get things done through group effort.',
-                'Feels happy and excited to see team each day.'
-            ],
-            _does=[
-                'Is engaged in team conversations.',
-                'Is actively involved in Agile Ceremonies.',
-                'Often starts discussing or solving problems before all directions are completed.',
-                'Some scrummers allow the overshadow of team accomplishments to be an excuse for poor individual contribution.'
-            ]
+            _empathy_map={
+                'says': [
+                    'I like working in teams and collaborating with peers.',
+                    "It is OK that we don't get things right as we have iteration opportunities."
+                ],
+                'thinks': [
+                    'Believes in team and has a growth mindset.',
+                    'Sometimes is unsure how their individual work impacts their grade in class.'
+                ],
+                'feels': [
+                    'Thinks about solving issues together.',
+                    'Hopes to get things done through group effort.',
+                    'Feels happy and excited to see team each day.'
+                ],
+                'does': [
+                    'Is engaged in team conversations.',
+                    'Is actively involved in Agile Ceremonies.',
+                    'Often starts discussing or solving problems before all directions are completed.',
+                    'Some scrummers allow the overshadow of team accomplishments to be an excuse for poor individual contribution.'
+                ]
+            }
         )
         
         # Planner Persona - Phoenix
@@ -292,26 +302,28 @@ def initPersonas():
             _bio='I am an organized CS student who excels at planning, tracking, and communicating with my team. I champion process management and issue tracking, and I am motivated by seeing a comprehensive plan come together. I gain satisfaction from seeing projects that are working and highly functional. Sometimes, I struggle to balance planning with hands-on technical work, especially when there is a lot to organize or integrate.',
             _archetype=['Organized', 'Detail-oriented', 'Strategic'],
             _personality_type=['Process Manager', 'Communicator'],
-            _says=[
-                'It is satisfying seeing something I worked on become useful.',
-                'I have read every detail written with exactness.',
-                'I notice these inconsistencies in requirements.'
-            ],
-            _thinks=[
-                'Believes a comprehensive plan should incorporate all requirements.',
-                'Thinks they need to read all provided information.',
-                'Desires feedback from team members on accomplishments related to plan.'
-            ],
-            _feels=[
-                'Feels responsibility for communicating plans with others.',
-                'Hopes that all team members will do their assigned portion of the work.'
-            ],
-            _does=[
-                'Often a champion of issue tracking and kanban boards.',
-                'Seeks guidance on issues that present barriers or impede progress on the plan.',
-                'Seeks opportunities for the instructor to let them lead larger classroom projects or prepare for seminar activities like AP Testing.',
-                'Sometimes struggles with prioritizing coding, as there is always so much to organize, plan, or integrate.'
-            ]
+            _empathy_map={
+                'says': [
+                    'It is satisfying seeing something I worked on become useful.',
+                    'I have read every detail written with exactness.',
+                    'I notice these inconsistencies in requirements.'
+                ],
+                'thinks': [
+                    'Believes a comprehensive plan should incorporate all requirements.',
+                    'Thinks they need to read all provided information.',
+                    'Desires feedback from team members on accomplishments related to plan.'
+                ],
+                'feels': [
+                    'Feels responsibility for communicating plans with others.',
+                    'Hopes that all team members will do their assigned portion of the work.'
+                ],
+                'does': [
+                    'Often a champion of issue tracking and kanban boards.',
+                    'Seeks guidance on issues that present barriers or impede progress on the plan.',
+                    'Seeks opportunities for the instructor to let them lead larger classroom projects or prepare for seminar activities like AP Testing.',
+                    'Sometimes struggles with prioritizing coding, as there is always so much to organize, plan, or integrate.'
+                ]
+            }
         )
         
         # Closer Persona - Cody
@@ -322,28 +334,30 @@ def initPersonas():
             _bio='I am a detail-oriented CS student who thrives on completing tasks and meeting milestones. I feel most confident when requirements are clear and feedback is available, and I take pride in finishing work efficiently. While I excel in structured environments, I may hesitate or feel anxious with open-ended assignments. Seeking confirmation from teachers or peers helps me stay on track and achieve success.',
             _archetype=['Detail-oriented', 'Driven', 'Perfectionist'],
             _personality_type=['Finisher', 'Reliable'],
-            _says=[
-                'It makes me happy to finish tasks.',
-                'I listened to your instructions, do you think my idea is OK?',
-                'Here is my work after our last conversation, does it meet the requirements?'
-            ],
-            _thinks=[
-                'Focuses on how tasks map to requirements.',
-                'Worries about meeting exact grade requirements.',
-                'Thinks of long term success, often beyond classroom (ie career and college).'
-            ],
-            _feels=[
-                'Hopes to achieve a path to success by obtaining extra assurances.',
-                'Feel confident and satisfied when coding and meeting requirements on vetted issues and meeting milestones.',
-                'Desires to be active collaborator and communicator.'
-            ],
-            _does=[
-                'Quickly acts on well-defined plans and completes technical work efficiently.',
-                'Regularly meets personal and project milestones.',
-                'Seeks to be first in line for preliminary reviews, but will trend toward back of line on summative reviews.',
-                'Seeks confirmation from teachers or peers before moving on to the next task.',
-                'May get stuck or hesitate when faced with open-ended or creative assignments.'
-            ]
+            _empathy_map={
+                'says': [
+                    'It makes me happy to finish tasks.',
+                    'I listened to your instructions, do you think my idea is OK?',
+                    'Here is my work after our last conversation, does it meet the requirements?'
+                ],
+                'thinks': [
+                    'Focuses on how tasks map to requirements.',
+                    'Worries about meeting exact grade requirements.',
+                    'Thinks of long term success, often beyond classroom (ie career and college).'
+                ],
+                'feels': [
+                    'Hopes to achieve a path to success by obtaining extra assurances.',
+                    'Feel confident and satisfied when coding and meeting requirements on vetted issues and meeting milestones.',
+                    'Desires to be active collaborator and communicator.'
+                ],
+                'does': [
+                    'Quickly acts on well-defined plans and completes technical work efficiently.',
+                    'Regularly meets personal and project milestones.',
+                    'Seeks to be first in line for preliminary reviews, but will trend toward back of line on summative reviews.',
+                    'Seeks confirmation from teachers or peers before moving on to the next task.',
+                    'May get stuck or hesitate when faced with open-ended or creative assignments.'
+                ]
+            }
         )
         
         """Social interest personas for teen engagement"""
@@ -356,10 +370,12 @@ def initPersonas():
             _bio='I live for the rush of competition and the thrill of leveling up. Gaming is where I connect with friends, strategize, and express myself. Whether it\'s esports, RPGs, or casual mobile games, I find community and purpose in virtual worlds.',
             _archetype=['Competitive', 'Strategic', 'Connected'],
             _personality_type=['Team Player', 'Problem Solver'],
-            _says=['Did you see that clutch play?', 'We should squad up later.', 'I just hit Diamond rank!'],
-            _thinks=['Gaming teaches real skills like teamwork and quick thinking.', 'My online friends understand me better than most IRL people.'],
-            _feels=['Most alive when in the zone during intense matches.', 'Frustrated when people dismiss gaming as just entertainment.'],
-            _does=['Streams gameplay or watches Twitch/YouTube gaming content.', 'Analyzes strategies and optimizes character builds.', 'Coordinates with teammates across time zones.']
+            _empathy_map={
+                'says': ['Did you see that clutch play?', 'We should squad up later.', 'I just hit Diamond rank!'],
+                'thinks': ['Gaming teaches real skills like teamwork and quick thinking.', 'My online friends understand me better than most IRL people.'],
+                'feels': ['Most alive when in the zone during intense matches.', 'Frustrated when people dismiss gaming as just entertainment.'],
+                'does': ['Streams gameplay or watches Twitch/YouTube gaming content.', 'Analyzes strategies and optimizes character builds.', 'Coordinates with teammates across time zones.']
+            }
         )
         
         # Musician Persona
@@ -370,10 +386,12 @@ def initPersonas():
             _bio='Music is my language and my escape. I express emotions through sound, whether creating beats, playing instruments, or curating the perfect playlist. Music connects me to culture, identity, and community in ways words cannot.',
             _archetype=['Creative', 'Expressive', 'Passionate'],
             _personality_type=['Artist', 'Connector'],
-            _says=['This song perfectly captures the vibe.', 'Want to hear what I\'ve been working on?', 'Music is everything to me.'],
-            _thinks=['Different genres reflect different parts of my identity.', 'Creating music is how I process my feelings.'],
-            _feels=['Energized by discovering new artists and sounds.', 'Vulnerable when sharing original work with others.'],
-            _does=['Spends hours perfecting a track or practicing an instrument.', 'Makes playlists for every mood and occasion.', 'Attends concerts and connects with other musicians online.']
+            _empathy_map={
+                'says': ['This song perfectly captures the vibe.', 'Want to hear what I\'ve been working on?', 'Music is everything to me.'],
+                'thinks': ['Different genres reflect different parts of my identity.', 'Creating music is how I process my feelings.'],
+                'feels': ['Energized by discovering new artists and sounds.', 'Vulnerable when sharing original work with others.'],
+                'does': ['Spends hours perfecting a track or practicing an instrument.', 'Makes playlists for every mood and occasion.', 'Attends concerts and connects with other musicians online.']
+            }
         )
         
         # Athlete Persona
@@ -384,10 +402,12 @@ def initPersonas():
             _bio='I thrive on movement, competition, and pushing my physical limits. Fitness isn\'t just exercise—it\'s discipline, confidence, and mental health. Whether team sports or solo workouts, I find strength in the grind and community in shared goals.',
             _archetype=['Driven', 'Disciplined', 'Energetic'],
             _personality_type=['Leader', 'Motivator'],
-            _says=['No pain, no gain.', 'Let\'s hit the gym together.', 'I PR\'d today!'],
-            _thinks=['Physical strength builds mental resilience.', 'My routine keeps me grounded and focused.'],
-            _feels=['Accomplished after a tough workout or game.', 'Restless when unable to train or compete.'],
-            _does=['Tracks progress with fitness apps and sets measurable goals.', 'Encourages friends to join workouts or sports.', 'Follows athletes and fitness influencers for inspiration.']
+            _empathy_map={
+                'says': ['No pain, no gain.', 'Let\'s hit the gym together.', 'I PR\'d today!'],
+                'thinks': ['Physical strength builds mental resilience.', 'My routine keeps me grounded and focused.'],
+                'feels': ['Accomplished after a tough workout or game.', 'Restless when unable to train or compete.'],
+                'does': ['Tracks progress with fitness apps and sets measurable goals.', 'Encourages friends to join workouts or sports.', 'Follows athletes and fitness influencers for inspiration.']
+            }
         )
         
         # Explorer Persona
@@ -398,10 +418,12 @@ def initPersonas():
             _bio='I crave new experiences, cultures, and perspectives. Travel and adventure feed my curiosity about the world. Even locally, I seek hidden gems, try new foods, and collect stories that broaden my understanding of life.',
             _archetype=['Curious', 'Adventurous', 'Open-minded'],
             _personality_type=['Seeker', 'Storyteller'],
-            _says=['I need to visit there someday.', 'Let\'s try that new place downtown.', 'Travel changes you.'],
-            _thinks=['Every place has a story worth discovering.', 'Comfort zones are meant to be expanded.'],
-            _feels=['Alive when exploring somewhere new.', 'Inspired by different cultures and perspectives.'],
-            _does=['Plans trips and researches destinations obsessively.', 'Documents experiences through photos and journals.', 'Seeks out diverse foods, events, and communities.']
+            _empathy_map={
+                'says': ['I need to visit there someday.', 'Let\'s try that new place downtown.', 'Travel changes you.'],
+                'thinks': ['Every place has a story worth discovering.', 'Comfort zones are meant to be expanded.'],
+                'feels': ['Alive when exploring somewhere new.', 'Inspired by different cultures and perspectives.'],
+                'does': ['Plans trips and researches destinations obsessively.', 'Documents experiences through photos and journals.', 'Seeks out diverse foods, events, and communities.']
+            }
         )
         
         """Achievement-oriented personas for goal-driven matching"""
@@ -414,10 +436,12 @@ def initPersonas():
             _bio='I am driven by academic excellence and preparing for my future. AP exams, SAT/ACT scores, and college admissions define my success. I take challenging courses, maintain a high GPA, and constantly think about how my achievements will shape my college applications and career path.',
             _archetype=['Disciplined', 'Goal-oriented', 'Achievement-focused'],
             _personality_type=['Academic', 'Future-minded'],
-            _says=['What AP classes are you taking?', 'I need a 5 on this exam.', 'This will look good on my college application.'],
-            _thinks=['Every grade matters for my transcript.', 'I need to stand out in the college admissions process.', 'Test scores can open doors to better opportunities.'],
-            _feels=['Anxious about test performance and college acceptance.', 'Proud when academic hard work pays off.', 'Pressure to maintain excellence across all subjects.'],
-            _does=['Studies rigorously for AP exams and standardized tests.', 'Researches colleges and scholarship opportunities constantly.', 'Takes the most challenging course load possible.', 'Seeks academic recognition through honor societies and awards.']
+            _empathy_map={
+                'says': ['What AP classes are you taking?', 'I need a 5 on this exam.', 'This will look good on my college application.'],
+                'thinks': ['Every grade matters for my transcript.', 'I need to stand out in the college admissions process.', 'Test scores can open doors to better opportunities.'],
+                'feels': ['Anxious about test performance and college acceptance.', 'Proud when academic hard work pays off.', 'Pressure to maintain excellence across all subjects.'],
+                'does': ['Studies rigorously for AP exams and standardized tests.', 'Researches colleges and scholarship opportunities constantly.', 'Takes the most challenging course load possible.', 'Seeks academic recognition through honor societies and awards.']
+            }
         )
         
         # Competitor Persona
@@ -428,10 +452,12 @@ def initPersonas():
             _bio='I thrive in competitive environments and love the rush of tournaments and competitions. Whether it\'s robotics, CyberPatriots, DECA, or hackathons, I\'m driven by the challenge of testing my skills against others. Winning trophies, medals, and recognition fuels my passion.',
             _archetype=['Competitive', 'Team-focused', 'Strategic'],
             _personality_type=['Winner', 'Performer'],
-            _says=['Our team is going to nationals!', 'We placed first in regionals!', 'I want to compete at the highest level.'],
-            _thinks=['Competition brings out my best performance.', 'Team victories are sweeter than individual wins.', 'Preparation and practice lead to championship results.'],
-            _feels=['Energized by competition pressure and high stakes.', 'Proud representing my school at tournaments.', 'Driven to improve after every competition.'],
-            _does=['Joins competitive clubs like robotics, CyberPatriots, DECA, Science Olympiad.', 'Practices intensely before competitions and tournaments.', 'Analyzes competitor strategies to gain an edge.', 'Celebrates team victories and learns from defeats.']
+            _empathy_map={
+                'says': ['Our team is going to nationals!', 'We placed first in regionals!', 'I want to compete at the highest level.'],
+                'thinks': ['Competition brings out my best performance.', 'Team victories are sweeter than individual wins.', 'Preparation and practice lead to championship results.'],
+                'feels': ['Energized by competition pressure and high stakes.', 'Proud representing my school at tournaments.', 'Driven to improve after every competition.'],
+                'does': ['Joins competitive clubs like robotics, CyberPatriots, DECA, Science Olympiad.', 'Practices intensely before competitions and tournaments.', 'Analyzes competitor strategies to gain an edge.', 'Celebrates team victories and learns from defeats.']
+            }
         )
         
         # Builder Persona
@@ -442,10 +468,12 @@ def initPersonas():
             _bio='I create tangible things that work and matter. Whether coding apps, building robots, designing products, or crafting solutions, I love bringing ideas to life. My hands-on approach and maker mindset drive me to build, test, and iterate until it works perfectly.',
             _archetype=['Practical', 'Hands-on', 'Creative'],
             _personality_type=['Maker', 'Engineer'],
-            _says=['Let me build a prototype.', 'I can make that work.', 'Look what I created!'],
-            _thinks=['Building is the best way to learn.', 'Real projects are more valuable than theoretical work.', 'Seeing my creations in action is the ultimate reward.'],
-            _feels=['Satisfied when projects come to life.', 'Excited by technical challenges and problem-solving.', 'Frustrated when stuck on implementation details.'],
-            _does=['Builds projects, apps, robots, and physical creations.', 'Joins maker clubs, robotics teams, and engineering groups.', 'Shares creations on GitHub, maker fairs, and competitions.', 'Learns new tools and technologies through hands-on experimentation.']
+            _empathy_map={
+                'says': ['Let me build a prototype.', 'I can make that work.', 'Look what I created!'],
+                'thinks': ['Building is the best way to learn.', 'Real projects are more valuable than theoretical work.', 'Seeing my creations in action is the ultimate reward.'],
+                'feels': ['Satisfied when projects come to life.', 'Excited by technical challenges and problem-solving.', 'Frustrated when stuck on implementation details.'],
+                'does': ['Builds projects, apps, robots, and physical creations.', 'Joins maker clubs, robotics teams, and engineering groups.', 'Shares creations on GitHub, maker fairs, and competitions.', 'Learns new tools and technologies through hands-on experimentation.']
+            }
         )
         
         # Ambassador Persona
@@ -456,10 +484,12 @@ def initPersonas():
             _bio='I find purpose in serving my community and making a difference beyond myself. Whether tutoring younger students, advocating for social justice, volunteering at elementary schools, or leading service projects, I measure success by the positive impact I create in others\' lives.',
             _archetype=['Service-oriented', 'Compassionate', 'Leader'],
             _personality_type=['Advocate', 'Mentor'],
-            _says=['How can we help our community?', 'I\'m tutoring elementary kids this weekend.', 'We need to make a difference.'],
-            _thinks=['Service to others gives my life meaning.', 'Education and opportunity should be accessible to everyone.', 'Small acts of kindness create ripple effects.'],
-            _feels=['Fulfilled when helping others succeed and grow.', 'Passionate about social justice and equity issues.', 'Connected to community through service work.'],
-            _does=['Volunteers regularly at elementary schools or community centers.', 'Tutors and mentors younger students in STEM or other subjects.', 'Joins service clubs focused on social justice and community impact.', 'Organizes fundraisers, awareness campaigns, and service projects.']
+            _empathy_map={
+                'says': ['How can we help our community?', 'I\'m tutoring elementary kids this weekend.', 'We need to make a difference.'],
+                'thinks': ['Service to others gives my life meaning.', 'Education and opportunity should be accessible to everyone.', 'Small acts of kindness create ripple effects.'],
+                'feels': ['Fulfilled when helping others succeed and grow.', 'Passionate about social justice and equity issues.', 'Connected to community through service work.'],
+                'does': ['Volunteers regularly at elementary schools or community centers.', 'Tutors and mentors younger students in STEM or other subjects.', 'Joins service clubs focused on social justice and community impact.', 'Organizes fundraisers, awareness campaigns, and service projects.']
+            }
         )
         
         """Fantasy superpower personas for aspirational matching"""
@@ -472,10 +502,12 @@ def initPersonas():
             _bio='If I had a superpower, it would be super speed—getting things done fast, responding instantly, and never wasting time. I value efficiency, quick thinking, and staying ahead of the curve.',
             _archetype=['Fast-paced', 'Responsive', 'Efficient'],
             _personality_type=['Executor', 'Quick-thinker'],
-            _says=['Let\'s move quickly on this.', 'Time is precious.', 'I already finished that.'],
-            _thinks=['Speed and momentum create success.', 'Waiting around wastes opportunity.'],
-            _feels=['Energized by rapid progress and quick wins.', 'Impatient with slow processes or delays.'],
-            _does=['Completes tasks ahead of deadlines.', 'Multitasks and context-switches rapidly.', 'Optimizes workflows for maximum efficiency.']
+            _empathy_map={
+                'says': ['Let\'s move quickly on this.', 'Time is precious.', 'I already finished that.'],
+                'thinks': ['Speed and momentum create success.', 'Waiting around wastes opportunity.'],
+                'feels': ['Energized by rapid progress and quick wins.', 'Impatient with slow processes or delays.'],
+                'does': ['Completes tasks ahead of deadlines.', 'Multitasks and context-switches rapidly.', 'Optimizes workflows for maximum efficiency.']
+            }
         )
         
         # Strength Persona
@@ -486,10 +518,12 @@ def initPersonas():
             _bio='If I had a superpower, it would be super strength—the ability to tackle the hardest challenges, carry heavy loads, and power through obstacles. I value resilience, determination, and raw capability.',
             _archetype=['Resilient', 'Powerful', 'Unstoppable'],
             _personality_type=['Force', 'Perseverer'],
-            _says=['I can handle the tough stuff.', 'Bring on the challenge.', 'I don\'t give up easily.'],
-            _thinks=['Strength comes from persistence and grit.', 'The hardest problems are the most rewarding.'],
-            _feels=['Confident tackling difficult tasks others avoid.', 'Energized by overcoming major obstacles.'],
-            _does=['Volunteers for the most challenging assignments.', 'Pushes through setbacks with determination.', 'Supports teammates who need heavy lifting.']
+            _empathy_map={
+                'says': ['I can handle the tough stuff.', 'Bring on the challenge.', 'I don\'t give up easily.'],
+                'thinks': ['Strength comes from persistence and grit.', 'The hardest problems are the most rewarding.'],
+                'feels': ['Confident tackling difficult tasks others avoid.', 'Energized by overcoming major obstacles.'],
+                'does': ['Volunteers for the most challenging assignments.', 'Pushes through setbacks with determination.', 'Supports teammates who need heavy lifting.']
+            }
         )
         
         # Intelligence Persona
@@ -500,10 +534,12 @@ def initPersonas():
             _bio='If I had a superpower, it would be super intelligence—solving complex problems, seeing patterns others miss, and mastering any subject. I value knowledge, strategy, and intellectual excellence.',
             _archetype=['Analytical', 'Strategic', 'Intellectual'],
             _personality_type=['Thinker', 'Strategist'],
-            _says=['Let me analyze this first.', 'I see a pattern here.', 'Knowledge is power.'],
-            _thinks=['Deep understanding beats surface-level knowing.', 'Strategic thinking prevents future problems.'],
-            _feels=['Excited by intellectual puzzles and complex systems.', 'Frustrated by illogical approaches or ignorance.'],
-            _does=['Researches thoroughly before making decisions.', 'Develops sophisticated strategies and plans.', 'Masters new concepts quickly through intense study.']
+            _empathy_map={
+                'says': ['Let me analyze this first.', 'I see a pattern here.', 'Knowledge is power.'],
+                'thinks': ['Deep understanding beats surface-level knowing.', 'Strategic thinking prevents future problems.'],
+                'feels': ['Excited by intellectual puzzles and complex systems.', 'Frustrated by illogical approaches or ignorance.'],
+                'does': ['Researches thoroughly before making decisions.', 'Develops sophisticated strategies and plans.', 'Masters new concepts quickly through intense study.']
+            }
         )
         
         # Flight Persona
@@ -514,10 +550,12 @@ def initPersonas():
             _bio='If I had a superpower, it would be flight—seeing the big picture from above, rising above limitations, and reaching new heights. I value perspective, freedom, and boundless possibility.',
             _archetype=['Big-picture', 'Optimistic', 'Limitless'],
             _personality_type=['Dreamer', 'Inspirer'],
-            _says=['Imagine the possibilities.', 'Let\'s aim higher.', 'The sky\'s not the limit.'],
-            _thinks=['Perspective changes everything.', 'Limitations are often self-imposed.'],
-            _feels=['Inspired by ambitious visions and bold goals.', 'Confined by narrow thinking or small dreams.'],
-            _does=['Sets audacious goals that inspire others.', 'Sees connections across different domains.', 'Encourages teams to think beyond constraints.']
+            _empathy_map={
+                'says': ['Imagine the possibilities.', 'Let\'s aim higher.', 'The sky\'s not the limit.'],
+                'thinks': ['Perspective changes everything.', 'Limitations are often self-imposed.'],
+                'feels': ['Inspired by ambitious visions and bold goals.', 'Confined by narrow thinking or small dreams.'],
+                'does': ['Sets audacious goals that inspire others.', 'Sees connections across different domains.', 'Encourages teams to think beyond constraints.']
+            }
         )
         
         personas = [p1, p2, p3, p4, s1, s2, s3, s4, a1, a2, a3, a4, f1, f2, f3, f4]
