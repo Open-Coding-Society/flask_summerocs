@@ -33,9 +33,11 @@ class UserPersona(db.Model):
     selected_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     
     # Define relationships
+    user = db.relationship("User", backref=db.backref("user_personas_rel", cascade="all, delete-orphan"))
     persona = db.relationship("Persona", backref=db.backref("user_personas_rel", cascade="all, delete-orphan"))
     
-    def __init__(self, persona, weight=1):
+    def __init__(self, user, persona, weight=1):
+        self.user = user
         self.persona = persona
         self.weight = weight
         self.selected_at = datetime.now(timezone.utc)
@@ -44,7 +46,10 @@ class UserPersona(db.Model):
     def read(self):
         """Read user persona selection data."""
         return {
-            'alias': self.persona.alias,
+            'user_id': self.user_id,
+            'uid': self.user.uid,
+            'persona_id': self.persona_id,
+            'persona_alias': self.persona.alias,
             'weight': self.weight,
             'selected_at': self.selected_at.isoformat() if self.selected_at else None
         }
@@ -567,7 +572,7 @@ def initPersonaUsers():
                 
                 # Assign the user their namesake persona (primary identity)
                 namesake_category = persona._category
-                namesake_up = UserPersona(persona=persona, weight=2)
+                namesake_up = UserPersona(user=user, persona=persona, weight=2)
                 user_persona_selections.append(namesake_up)
                 
                 # Assign personas from other categories based on selection rules
@@ -579,15 +584,15 @@ def initPersonaUsers():
                         # Social: Pick 2 (1 primary weight=2, 1 secondary weight=1)
                         if len(personas_list) >= 2:
                             social_picks = random.sample(personas_list, 2)
-                            user_persona_selections.append(UserPersona(persona=social_picks[0], weight=2))
-                            user_persona_selections.append(UserPersona(persona=social_picks[1], weight=1))
+                            user_persona_selections.append(UserPersona(user=user, persona=social_picks[0], weight=2))
+                            user_persona_selections.append(UserPersona(user=user, persona=social_picks[1], weight=1))
                         elif len(personas_list) == 1:
-                            user_persona_selections.append(UserPersona(persona=personas_list[0], weight=2))
+                            user_persona_selections.append(UserPersona(user=user, persona=personas_list[0], weight=2))
                     else:
                         # Student, Achievement, Fantasy: Pick 1 (weight=1)
                         if personas_list:
                             random_pick = random.choice(personas_list)
-                            user_persona_selections.append(UserPersona(persona=random_pick, weight=1))
+                            user_persona_selections.append(UserPersona(user=user, persona=random_pick, weight=1))
                 
                 # Add all UserPersona relationships to the user
                 for up in user_persona_selections:
