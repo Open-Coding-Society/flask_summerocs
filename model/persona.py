@@ -2,7 +2,7 @@ from __init__ import app, db
 from sqlalchemy import JSON
 from sqlalchemy.orm import validates
 from sqlalchemy.exc import IntegrityError
-from datetime import datetime
+from datetime import datetime, timezone
 
 # Persona categories - different domains/types of archetypes
 PERSONA_CATEGORIES = [
@@ -30,7 +30,7 @@ class UserPersona(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
     persona_id = db.Column(db.Integer, db.ForeignKey('personas.id'), primary_key=True)
     weight = db.Column(db.Integer, default=1, nullable=False)  # 2 = primary, 1 = secondary
-    selected_at = db.Column(db.DateTime, default=datetime.utcnow)
+    selected_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     
     # Define relationships
     persona = db.relationship("Persona", backref=db.backref("user_personas_rel", cascade="all, delete-orphan"))
@@ -38,7 +38,8 @@ class UserPersona(db.Model):
     def __init__(self, persona, weight=1):
         self.persona = persona
         self.weight = weight
-        self.selected_at = datetime.utcnow()
+        self.selected_at = datetime.now(timezone.utc)
+
     
     def read(self):
         """Read user persona selection data."""
@@ -358,7 +359,7 @@ def initPersonas():
         
         # Musician Persona
         s2 = Persona(
-            _alias='amedaus',
+            _alias='cadence',
             _category='social',
             _title='Musician',
             _bio='Music is my language and my escape. I express emotions through sound, whether creating beats, playing instruments, or curating the perfect playlist. Music connects me to culture, identity, and community in ways words cannot.',
@@ -386,7 +387,7 @@ def initPersonas():
         
         # Explorer Persona
         s4 = Persona(
-            _alias='rover',
+            _alias='marco',
             _category='social',
             _title='Explorer',
             _bio='I crave new experiences, cultures, and perspectives. Travel and adventure feed my curiosity about the world. Even locally, I seek hidden gems, try new foods, and collect stories that broaden my understanding of life.',
@@ -402,7 +403,7 @@ def initPersonas():
         
         # Scholar Persona
         a1 = Persona(
-            _alias='lex',
+            _alias='libra',
             _category='achievement',
             _title='Scholar',
             _bio='I am driven by academic excellence and preparing for my future. AP exams, SAT/ACT scores, and college admissions define my success. I take challenging courses, maintain a high GPA, and constantly think about how my achievements will shape my college applications and career path.',
@@ -444,7 +445,7 @@ def initPersonas():
         
         # Ambassador Persona
         a4 = Persona(
-            _alias='avery',
+            _alias='madam',
             _category='achievement',
             _title='Ambassador',
             _bio='I find purpose in serving my community and making a difference beyond myself. Whether tutoring younger students, advocating for social justice, volunteering at elementary schools, or leading service projects, I measure success by the positive impact I create in others\' lives.',
@@ -502,7 +503,7 @@ def initPersonas():
         
         # Flight Persona
         f4 = Persona(
-            _alias='soar',
+            _alias='sky',
             _category='fantasy',
             _title='Visionary',
             _bio='If I had a superpower, it would be flight—seeing the big picture from above, rising above limitations, and reaching new heights. I value perspective, freedom, and boundless possibility.',
