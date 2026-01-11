@@ -156,10 +156,7 @@ class Persona(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     _category = db.Column(db.String(32), nullable=False)
     _alias = db.Column(db.String(32), unique=True, nullable=False)
-    _title = db.Column(db.String(64), nullable=False)
-    _bio = db.Column(db.Text, nullable=False)
-    _archetype = db.Column(JSON, nullable=False)
-    _personality_type = db.Column(JSON, nullable=True)
+    _bio_map = db.Column(JSON, nullable=False)  # Stores: {'title': str, 'description': str, 'archetype': [], 'personality_type': []}
     _empathy_map = db.Column(JSON, nullable=True)  # Stores: {'says': [], 'thinks': [], 'feels': [], 'does': []}
     
     # Define many-to-many relationship with User model through UserPersona table
@@ -168,13 +165,10 @@ class Persona(db.Model):
     #                            backref=db.backref('users', lazy=True))
     
 
-    def __init__(self, _alias, _title, _bio, _archetype, _category, _personality_type=None, _empathy_map=None):
+    def __init__(self, _alias, _category, _bio_map, _empathy_map=None):
         self._alias = _alias
-        self._title = _title
-        self._bio = _bio
-        self._archetype = _archetype
         self._category = _category
-        self._personality_type = _personality_type
+        self._bio_map = _bio_map
         self._empathy_map = _empathy_map
 
     @property
@@ -183,14 +177,20 @@ class Persona(db.Model):
     
     def __getattr__(self, name):
         """
-        Generic property accessor for empathy_map keys.
-        Allows dot notation access to any empathy_map field (e.g., persona.says, persona.thinks).
+        Generic property accessor for _bio_map and _empathy_map keys.
+        Allows dot notation access to any field in these maps.
+        Examples: persona.title, persona.description, persona.archetype, persona.says, persona.thinks
         This is called only when the attribute is not found through normal lookup.
         """
         if name.startswith('_'):
             # Avoid infinite recursion for private attributes
             raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
         
+        # Check bio_map first (title, description, archetype, personality_type)
+        if self._bio_map and name in self._bio_map:
+            return self._bio_map[name]
+        
+        # Then check empathy_map (says, thinks, feels, does)
         if self._empathy_map and name in self._empathy_map:
             return self._empathy_map[name]
         
@@ -212,10 +212,7 @@ class Persona(db.Model):
             "id": self.id,
             "category": self._category,
             "alias": self._alias,
-            "title": self._title,
-            "bio": self._bio,
-            "archetype": self._archetype,
-            "personality_type": self._personality_type,
+            "bio_map": self._bio_map,
             "empathy_map": self._empathy_map
         }
 
@@ -234,10 +231,12 @@ def initPersonas():
         p1 = Persona(
             _alias='indy',
             _category='student',
-            _title='Technologist',
-            _bio='I am a driven CS student who enjoys individual work and tackling the hardest technical challenges. I am motivated by mastery and recognition, and often surprise others with exceptional problem-solving skills. I excel in individual assignments and competitions, but group work can be frustrating, especially when team members are less focused on code or schedules are unclear. Building trust and communication with peers is an ongoing challenge, but when I am engaged, I can elevate the whole project.',
-            _archetype=['Introvert', 'Analytical', 'Independent'],
-            _personality_type=['Ambitious', 'Focused'],
+            _bio_map={
+                'title': 'Technologist',
+                'description': 'I am a driven CS student who enjoys individual work and tackling the hardest technical challenges. I am motivated by mastery and recognition, and often surprise others with exceptional problem-solving skills. I excel in individual assignments and competitions, but group work can be frustrating, especially when team members are less focused on code or schedules are unclear. Building trust and communication with peers is an ongoing challenge, but when I am engaged, I can elevate the whole project.',
+                'archetype': ['Introvert', 'Analytical', 'Independent'],
+                'personality_type': ['Ambitious', 'Focused']
+            },
             _empathy_map={
                 'says': [
                     'Look at this new feature I created.',
@@ -267,10 +266,12 @@ def initPersonas():
         p2 = Persona(
             _alias='salem',
             _category='student',
-            _title='Scrummer',
-            _bio='I am a collaborative learner who grows through teamwork and iteration. I enjoy working in teams, contributing to group success, and learning from others. Seeing my team each day makes me happy and excited to solve problems together. While I thrive in Agile environments, I sometimes find it challenging to show my unique contributions and can be unsure how my individual work impacts my grade, especially when groupthink makes it easy to blend in with the team.',
-            _archetype=['Collaborative', 'Optimistic', 'Team-oriented'],
-            _personality_type=['Agile', 'Growth Mindset'],
+            _bio_map={
+                'title': 'Scrummer',
+                'description': 'I am a collaborative learner who grows through teamwork and iteration. I enjoy working in teams, contributing to group success, and learning from others. Seeing my team each day makes me happy and excited to solve problems together. While I thrive in Agile environments, I sometimes find it challenging to show my unique contributions and can be unsure how my individual work impacts my grade, especially when groupthink makes it easy to blend in with the team.',
+                'archetype': ['Collaborative', 'Optimistic', 'Team-oriented'],
+                'personality_type': ['Agile', 'Growth Mindset']
+            },
             _empathy_map={
                 'says': [
                     'I like working in teams and collaborating with peers.',
@@ -298,10 +299,12 @@ def initPersonas():
         p3 = Persona(
             _alias='phoenix',
             _category='student',
-            _title='Planner',
-            _bio='I am an organized CS student who excels at planning, tracking, and communicating with my team. I champion process management and issue tracking, and I am motivated by seeing a comprehensive plan come together. I gain satisfaction from seeing projects that are working and highly functional. Sometimes, I struggle to balance planning with hands-on technical work, especially when there is a lot to organize or integrate.',
-            _archetype=['Organized', 'Detail-oriented', 'Strategic'],
-            _personality_type=['Process Manager', 'Communicator'],
+            _bio_map={
+                'title': 'Planner',
+                'description': 'I am an organized CS student who excels at planning, tracking, and communicating with my team. I champion process management and issue tracking, and I am motivated by seeing a comprehensive plan come together. I gain satisfaction from seeing projects that are working and highly functional. Sometimes, I struggle to balance planning with hands-on technical work, especially when there is a lot to organize or integrate.',
+                'archetype': ['Organized', 'Detail-oriented', 'Strategic'],
+                'personality_type': ['Process Manager', 'Communicator']
+            },
             _empathy_map={
                 'says': [
                     'It is satisfying seeing something I worked on become useful.',
@@ -330,10 +333,12 @@ def initPersonas():
         p4 = Persona(
             _alias='cody',
             _category='student',
-            _title='Closer',
-            _bio='I am a detail-oriented CS student who thrives on completing tasks and meeting milestones. I feel most confident when requirements are clear and feedback is available, and I take pride in finishing work efficiently. While I excel in structured environments, I may hesitate or feel anxious with open-ended assignments. Seeking confirmation from teachers or peers helps me stay on track and achieve success.',
-            _archetype=['Detail-oriented', 'Driven', 'Perfectionist'],
-            _personality_type=['Finisher', 'Reliable'],
+            _bio_map={
+                'title': 'Closer',
+                'description': 'I am a detail-oriented CS student who thrives on completing tasks and meeting milestones. I feel most confident when requirements are clear and feedback is available, and I take pride in finishing work efficiently. While I excel in structured environments, I may hesitate or feel anxious with open-ended assignments. Seeking confirmation from teachers or peers helps me stay on track and achieve success.',
+                'archetype': ['Detail-oriented', 'Driven', 'Perfectionist'],
+                'personality_type': ['Finisher', 'Reliable']
+            },
             _empathy_map={
                 'says': [
                     'It makes me happy to finish tasks.',
@@ -366,10 +371,12 @@ def initPersonas():
         s1 = Persona(
             _alias='pixel',
             _category='social',
-            _title='Gamer',
-            _bio='I live for the rush of competition and the thrill of leveling up. Gaming is where I connect with friends, strategize, and express myself. Whether it\'s esports, RPGs, or casual mobile games, I find community and purpose in virtual worlds.',
-            _archetype=['Competitive', 'Strategic', 'Connected'],
-            _personality_type=['Team Player', 'Problem Solver'],
+            _bio_map={
+                'title': 'Gamer',
+                'description': 'I live for the rush of competition and the thrill of leveling up. Gaming is where I connect with friends, strategize, and express myself. Whether it\'s esports, RPGs, or casual mobile games, I find community and purpose in virtual worlds.',
+                'archetype': ['Competitive', 'Strategic', 'Connected'],
+                'personality_type': ['Team Player', 'Problem Solver']
+            },
             _empathy_map={
                 'says': ['Did you see that clutch play?', 'We should squad up later.', 'I just hit Diamond rank!'],
                 'thinks': ['Gaming teaches real skills like teamwork and quick thinking.', 'My online friends understand me better than most IRL people.'],
@@ -382,10 +389,12 @@ def initPersonas():
         s2 = Persona(
             _alias='cadence',
             _category='social',
-            _title='Musician',
-            _bio='Music is my language and my escape. I express emotions through sound, whether creating beats, playing instruments, or curating the perfect playlist. Music connects me to culture, identity, and community in ways words cannot.',
-            _archetype=['Creative', 'Expressive', 'Passionate'],
-            _personality_type=['Artist', 'Connector'],
+            _bio_map={
+                'title': 'Musician',
+                'description': 'Music is my language and my escape. I express emotions through sound, whether creating beats, playing instruments, or curating the perfect playlist. Music connects me to culture, identity, and community in ways words cannot.',
+                'archetype': ['Creative', 'Expressive', 'Passionate'],
+                'personality_type': ['Artist', 'Connector']
+            },
             _empathy_map={
                 'says': ['This song perfectly captures the vibe.', 'Want to hear what I\'ve been working on?', 'Music is everything to me.'],
                 'thinks': ['Different genres reflect different parts of my identity.', 'Creating music is how I process my feelings.'],
@@ -398,10 +407,12 @@ def initPersonas():
         s3 = Persona(
             _alias='ace',
             _category='social',
-            _title='Athlete',
-            _bio='I thrive on movement, competition, and pushing my physical limits. Fitness isn\'t just exercise—it\'s discipline, confidence, and mental health. Whether team sports or solo workouts, I find strength in the grind and community in shared goals.',
-            _archetype=['Driven', 'Disciplined', 'Energetic'],
-            _personality_type=['Leader', 'Motivator'],
+            _bio_map={
+                'title': 'Athlete',
+                'description': 'I thrive on movement, competition, and pushing my physical limits. Fitness isn\'t just exercise—it\'s discipline, confidence, and mental health. Whether team sports or solo workouts, I find strength in the grind and community in shared goals.',
+                'archetype': ['Driven', 'Disciplined', 'Energetic'],
+                'personality_type': ['Leader', 'Motivator']
+            },
             _empathy_map={
                 'says': ['No pain, no gain.', 'Let\'s hit the gym together.', 'I PR\'d today!'],
                 'thinks': ['Physical strength builds mental resilience.', 'My routine keeps me grounded and focused.'],
@@ -414,10 +425,12 @@ def initPersonas():
         s4 = Persona(
             _alias='marco',
             _category='social',
-            _title='Explorer',
-            _bio='I crave new experiences, cultures, and perspectives. Travel and adventure feed my curiosity about the world. Even locally, I seek hidden gems, try new foods, and collect stories that broaden my understanding of life.',
-            _archetype=['Curious', 'Adventurous', 'Open-minded'],
-            _personality_type=['Seeker', 'Storyteller'],
+            _bio_map={
+                'title': 'Explorer',
+                'description': 'I crave new experiences, cultures, and perspectives. Travel and adventure feed my curiosity about the world. Even locally, I seek hidden gems, try new foods, and collect stories that broaden my understanding of life.',
+                'archetype': ['Curious', 'Adventurous', 'Open-minded'],
+                'personality_type': ['Seeker', 'Storyteller']
+            },
             _empathy_map={
                 'says': ['I need to visit there someday.', 'Let\'s try that new place downtown.', 'Travel changes you.'],
                 'thinks': ['Every place has a story worth discovering.', 'Comfort zones are meant to be expanded.'],
@@ -432,10 +445,12 @@ def initPersonas():
         a1 = Persona(
             _alias='libra',
             _category='achievement',
-            _title='Scholar',
-            _bio='I am driven by academic excellence and preparing for my future. AP exams, SAT/ACT scores, and college admissions define my success. I take challenging courses, maintain a high GPA, and constantly think about how my achievements will shape my college applications and career path.',
-            _archetype=['Disciplined', 'Goal-oriented', 'Achievement-focused'],
-            _personality_type=['Academic', 'Future-minded'],
+            _bio_map={
+                'title': 'Scholar',
+                'description': 'I am driven by academic excellence and preparing for my future. AP exams, SAT/ACT scores, and college admissions define my success. I take challenging courses, maintain a high GPA, and constantly think about how my achievements will shape my college applications and career path.',
+                'archetype': ['Disciplined', 'Goal-oriented', 'Achievement-focused'],
+                'personality_type': ['Academic', 'Future-minded']
+            },
             _empathy_map={
                 'says': ['What AP classes are you taking?', 'I need a 5 on this exam.', 'This will look good on my college application.'],
                 'thinks': ['Every grade matters for my transcript.', 'I need to stand out in the college admissions process.', 'Test scores can open doors to better opportunities.'],
@@ -448,10 +463,12 @@ def initPersonas():
         a2 = Persona(
             _alias='nikola',
             _category='achievement',
-            _title='Competitor',
-            _bio='I thrive in competitive environments and love the rush of tournaments and competitions. Whether it\'s robotics, CyberPatriots, DECA, or hackathons, I\'m driven by the challenge of testing my skills against others. Winning trophies, medals, and recognition fuels my passion.',
-            _archetype=['Competitive', 'Team-focused', 'Strategic'],
-            _personality_type=['Winner', 'Performer'],
+            _bio_map={
+                'title': 'Competitor',
+                'description': 'I thrive in competitive environments and love the rush of tournaments and competitions. Whether it\'s robotics, CyberPatriots, DECA, or hackathons, I\'m driven by the challenge of testing my skills against others. Winning trophies, medals, and recognition fuels my passion.',
+                'archetype': ['Competitive', 'Team-focused', 'Strategic'],
+                'personality_type': ['Winner', 'Performer']
+            },
             _empathy_map={
                 'says': ['Our team is going to nationals!', 'We placed first in regionals!', 'I want to compete at the highest level.'],
                 'thinks': ['Competition brings out my best performance.', 'Team victories are sweeter than individual wins.', 'Preparation and practice lead to championship results.'],
@@ -464,10 +481,12 @@ def initPersonas():
         a3 = Persona(
             _alias='isaac',
             _category='achievement',
-            _title='Builder',
-            _bio='I create tangible things that work and matter. Whether coding apps, building robots, designing products, or crafting solutions, I love bringing ideas to life. My hands-on approach and maker mindset drive me to build, test, and iterate until it works perfectly.',
-            _archetype=['Practical', 'Hands-on', 'Creative'],
-            _personality_type=['Maker', 'Engineer'],
+            _bio_map={
+                'title': 'Builder',
+                'description': 'I create tangible things that work and matter. Whether coding apps, building robots, designing products, or crafting solutions, I love bringing ideas to life. My hands-on approach and maker mindset drive me to build, test, and iterate until it works perfectly.',
+                'archetype': ['Practical', 'Hands-on', 'Creative'],
+                'personality_type': ['Maker', 'Engineer']
+            },
             _empathy_map={
                 'says': ['Let me build a prototype.', 'I can make that work.', 'Look what I created!'],
                 'thinks': ['Building is the best way to learn.', 'Real projects are more valuable than theoretical work.', 'Seeing my creations in action is the ultimate reward.'],
@@ -480,10 +499,12 @@ def initPersonas():
         a4 = Persona(
             _alias='madam',
             _category='achievement',
-            _title='Ambassador',
-            _bio='I find purpose in serving my community and making a difference beyond myself. Whether tutoring younger students, advocating for social justice, volunteering at elementary schools, or leading service projects, I measure success by the positive impact I create in others\' lives.',
-            _archetype=['Service-oriented', 'Compassionate', 'Leader'],
-            _personality_type=['Advocate', 'Mentor'],
+            _bio_map={
+                'title': 'Ambassador',
+                'description': 'I find purpose in serving my community and making a difference beyond myself. Whether tutoring younger students, advocating for social justice, volunteering at elementary schools, or leading service projects, I measure success by the positive impact I create in others\' lives.',
+                'archetype': ['Service-oriented', 'Compassionate', 'Leader'],
+                'personality_type': ['Advocate', 'Mentor']
+            },
             _empathy_map={
                 'says': ['How can we help our community?', 'I\'m tutoring elementary kids this weekend.', 'We need to make a difference.'],
                 'thinks': ['Service to others gives my life meaning.', 'Education and opportunity should be accessible to everyone.', 'Small acts of kindness create ripple effects.'],
@@ -498,10 +519,12 @@ def initPersonas():
         f1 = Persona(
             _alias='flash',
             _category='fantasy',
-            _title='Speedster',
-            _bio='If I had a superpower, it would be super speed—getting things done fast, responding instantly, and never wasting time. I value efficiency, quick thinking, and staying ahead of the curve.',
-            _archetype=['Fast-paced', 'Responsive', 'Efficient'],
-            _personality_type=['Executor', 'Quick-thinker'],
+            _bio_map={
+                'title': 'Speedster',
+                'description': 'If I had a superpower, it would be super speed—getting things done fast, responding instantly, and never wasting time. I value efficiency, quick thinking, and staying ahead of the curve.',
+                'archetype': ['Fast-paced', 'Responsive', 'Efficient'],
+                'personality_type': ['Executor', 'Quick-thinker']
+            },
             _empathy_map={
                 'says': ['Let\'s move quickly on this.', 'Time is precious.', 'I already finished that.'],
                 'thinks': ['Speed and momentum create success.', 'Waiting around wastes opportunity.'],
@@ -514,10 +537,12 @@ def initPersonas():
         f2 = Persona(
             _alias='parker',
             _category='fantasy',
-            _title='Powerhouse',
-            _bio='If I had a superpower, it would be super strength—the ability to tackle the hardest challenges, carry heavy loads, and power through obstacles. I value resilience, determination, and raw capability.',
-            _archetype=['Resilient', 'Powerful', 'Unstoppable'],
-            _personality_type=['Force', 'Perseverer'],
+            _bio_map={
+                'title': 'Powerhouse',
+                'description': 'If I had a superpower, it would be super strength—the ability to tackle the hardest challenges, carry heavy loads, and power through obstacles. I value resilience, determination, and raw capability.',
+                'archetype': ['Resilient', 'Powerful', 'Unstoppable'],
+                'personality_type': ['Force', 'Perseverer']
+            },
             _empathy_map={
                 'says': ['I can handle the tough stuff.', 'Bring on the challenge.', 'I don\'t give up easily.'],
                 'thinks': ['Strength comes from persistence and grit.', 'The hardest problems are the most rewarding.'],
@@ -530,10 +555,12 @@ def initPersonas():
         f3 = Persona(
             _alias='merlin',
             _category='fantasy',
-            _title='Mastermind',
-            _bio='If I had a superpower, it would be super intelligence—solving complex problems, seeing patterns others miss, and mastering any subject. I value knowledge, strategy, and intellectual excellence.',
-            _archetype=['Analytical', 'Strategic', 'Intellectual'],
-            _personality_type=['Thinker', 'Strategist'],
+            _bio_map={
+                'title': 'Mastermind',
+                'description': 'If I had a superpower, it would be super intelligence—solving complex problems, seeing patterns others miss, and mastering any subject. I value knowledge, strategy, and intellectual excellence.',
+                'archetype': ['Analytical', 'Strategic', 'Intellectual'],
+                'personality_type': ['Thinker', 'Strategist']
+            },
             _empathy_map={
                 'says': ['Let me analyze this first.', 'I see a pattern here.', 'Knowledge is power.'],
                 'thinks': ['Deep understanding beats surface-level knowing.', 'Strategic thinking prevents future problems.'],
@@ -546,10 +573,12 @@ def initPersonas():
         f4 = Persona(
             _alias='sky',
             _category='fantasy',
-            _title='Visionary',
-            _bio='If I had a superpower, it would be flight—seeing the big picture from above, rising above limitations, and reaching new heights. I value perspective, freedom, and boundless possibility.',
-            _archetype=['Big-picture', 'Optimistic', 'Limitless'],
-            _personality_type=['Dreamer', 'Inspirer'],
+            _bio_map={
+                'title': 'Visionary',
+                'description': 'If I had a superpower, it would be flight—seeing the big picture from above, rising above limitations, and reaching new heights. I value perspective, freedom, and boundless possibility.',
+                'archetype': ['Big-picture', 'Optimistic', 'Limitless'],
+                'personality_type': ['Dreamer', 'Inspirer']
+            },
             _empathy_map={
                 'says': ['Imagine the possibilities.', 'Let\'s aim higher.', 'The sky\'s not the limit.'],
                 'thinks': ['Perspective changes everything.', 'Limitations are often self-imposed.'],
@@ -563,7 +592,7 @@ def initPersonas():
         for persona in personas:
             try:
                 persona.create()
-                print(f"Created persona: {persona._title} ({persona._alias}) - {persona._category}")
+                print(f"Created persona: {persona.title} ({persona._alias}) - {persona._category}")
             except IntegrityError:
                 db.session.rollback()
                 print(f"Persona already exists: {persona._alias}")
@@ -595,7 +624,7 @@ def initPersonaUsers():
         for persona in all_personas:
             # Create user with persona alias as uid
             user = User(
-                name=persona._alias.capitalize() + " " + persona._title,
+                name=persona._alias.capitalize() + " " + persona._bio_map.get('title', ''),
                 uid=persona._alias,
                 password=app.config["DEFAULT_PASSWORD"],
                 role="User"
@@ -640,7 +669,7 @@ def initPersonaUsers():
                 db.session.commit()
                 
                 # Print summary of assigned personas
-                persona_summary = [f"{up.persona._title} (w={up.weight})" for up in user_persona_selections]
+                persona_summary = [f"{up.persona._bio_map.get('title', '')} (w={up.weight})" for up in user_persona_selections]
                 print(f"  Assigned personas: {', '.join(persona_summary)}")
                 
             except IntegrityError:
