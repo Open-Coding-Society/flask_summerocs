@@ -2,6 +2,7 @@ from __init__ import app, db
 from sqlalchemy import JSON
 from sqlalchemy.orm import validates
 from sqlalchemy.exc import IntegrityError
+from datetime import datetime
 
 # Persona categories - different domains/types of archetypes
 PERSONA_CATEGORIES = [
@@ -10,6 +11,130 @@ PERSONA_CATEGORIES = [
     'achievement',  # Achievement-oriented archetypes (builder, innovator, competitor, mentor)
     'fantasy'       # Superhero/superpower archetypes (speed, strength, intelligence, flight)
 ]
+
+class UserPersona(db.Model):
+    """
+    UserPersona Model
+    
+    A many-to-many relationship between 'users' and 'personas' tables.
+    Tracks user persona selections with weights for matching algorithms.
+    
+    Attributes:
+        user_id (Column): An integer representing the user's unique identifier, a foreign key that references the 'users' table.
+        persona_id (Column): An integer representing the persona's unique identifier, a foreign key that references the 'personas' table.
+        weight (Column): An integer representing the selection priority (2 for primary, 1 for secondary).
+        selected_at (Column): A datetime representing when the persona was selected.
+    """
+    __tablename__ = 'user_personas'
+    
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
+    persona_id = db.Column(db.Integer, db.ForeignKey('personas.id'), primary_key=True)
+    weight = db.Column(db.Integer, default=1, nullable=False)  # 2 = primary, 1 = secondary
+    selected_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Define relationships
+    persona = db.relationship("Persona", backref=db.backref("user_personas_rel", cascade="all, delete-orphan"))
+    
+    def __init__(self, persona, weight=1):
+        self.persona = persona
+        self.weight = weight
+        self.selected_at = datetime.utcnow()
+    
+    @staticmethod
+    def calculate_team_score(user_personas_list):
+        """
+        Calculate team compatibility score for classroom team formation.
+        Maximizes diversity in student category, similarity in achievement category.
+        
+        Args:
+            user_personas_list: List of lists, where each inner list contains UserPersona objects for one user
+            
+        Returns:
+            float: Team compatibility score (0-100)
+        """
+        if not user_personas_list or len(user_personas_list) < 2:
+            return 0.0
+            
+        # Extract personas by category for each user
+        student_personas = []
+        achievement_personas = []
+        
+        for user_personas in user_personas_list:
+            for up in user_personas:
+                if up.persona._category == 'student':
+                    student_personas.append(up.persona._alias)
+                elif up.persona._category == 'achievement':
+                    achievement_personas.append(up.persona._alias)
+        
+        # Calculate diversity score for student personas (want variety)
+        student_diversity = len(set(student_personas)) / len(student_personas) if student_personas else 0
+        
+        # Calculate similarity score for achievement personas (want overlap)
+        if achievement_personas:
+            from collections import Counter
+            achievement_counts = Counter(achievement_personas)
+            max_count = max(achievement_counts.values())
+            achievement_similarity = max_count / len(achievement_personas)
+        else:
+            achievement_similarity = 0
+        
+        # Weighted combination: 40% student diversity + 60% achievement similarity
+        team_score = (student_diversity * 0.4 + achievement_similarity * 0.6) * 100
+        return round(team_score, 2)
+    
+    @staticmethod
+    def calculate_match_score(user1_personas, user2_personas):
+        """
+        Calculate compatibility score for social matching/dating.
+        Emphasizes overlap in social interests with weight consideration.
+        
+        Args:
+            user1_personas: List of UserPersona objects for user 1
+            user2_personas: List of UserPersona objects for user 2
+            
+        Returns:
+            float: Match compatibility score (0-100)
+        """
+        if not user1_personas or not user2_personas:
+            return 0.0
+        
+        # Extract personas by category with weights
+        def get_personas_by_category(personas_list):
+            result = {'social': [], 'achievement': [], 'fantasy': []}
+            for up in personas_list:
+                category = up.persona._category
+                if category in result:
+                    result[category].append((up.persona._alias, up.weight))
+            return result
+        
+        u1_cats = get_personas_by_category(user1_personas)
+        u2_cats = get_personas_by_category(user2_personas)
+        
+        # Calculate social overlap score (weighted)
+        social_score = 0
+        u1_social = {alias: weight for alias, weight in u1_cats['social']}
+        u2_social = {alias: weight for alias, weight in u2_cats['social']}
+        
+        for alias in set(u1_social.keys()) & set(u2_social.keys()):
+            # Shared personas get points based on combined weight
+            social_score += u1_social[alias] + u2_social[alias]
+        
+        # Normalize social score (max possible: 2 primary matches = 2*2 + 2*2 = 8)
+        social_normalized = min(social_score / 8.0, 1.0)
+        
+        # Calculate achievement overlap
+        u1_achievement = {alias for alias, _ in u1_cats['achievement']}
+        u2_achievement = {alias for alias, _ in u2_cats['achievement']}
+        achievement_overlap = len(u1_achievement & u2_achievement) / max(len(u1_achievement | u2_achievement), 1)
+        
+        # Calculate fantasy complement (different powers create interesting dynamics)
+        u1_fantasy = {alias for alias, _ in u1_cats['fantasy']}
+        u2_fantasy = {alias for alias, _ in u2_cats['fantasy']}
+        fantasy_complement = 1.0 - (len(u1_fantasy & u2_fantasy) / max(len(u1_fantasy | u2_fantasy), 1))
+        
+        # Weighted combination: 50% social + 30% fantasy complement + 20% achievement
+        match_score = (social_normalized * 0.5 + fantasy_complement * 0.3 + achievement_overlap * 0.2) * 100
+        return round(match_score, 2)
 
 class Persona(db.Model):
     __tablename__ = 'personas'
@@ -25,6 +150,11 @@ class Persona(db.Model):
     _thinks = db.Column(JSON, nullable=True)
     _feels = db.Column(JSON, nullable=True)
     _does = db.Column(JSON, nullable=True)
+    
+    # Define many-to-many relationship with User model through UserPersona table
+    # Note: User model should add this backref:
+    # personas = db.relationship('Persona', secondary=UserPersona.__table__, lazy='subquery',
+    #                            backref=db.backref('users', lazy=True))
     
 
     def __init__(self, _alias, _title, _bio, _archetype, _category, _personality_type=None, _says=None, _thinks=None, _feels=None, _does=None):
@@ -381,3 +511,85 @@ def initPersonas():
             except IntegrityError:
                 db.session.rollback()
                 print(f"Persona already exists: {persona._alias}")
+
+
+def initPersonaUsers():
+    """
+    Create test users based on persona aliases and assign them persona attributes.
+    Each user gets their namesake persona plus random selections from other categories.
+    """
+    import random
+    from model.user import User
+    
+    with app.app_context():
+        """Ensure personas exist first"""
+        db.create_all()
+        
+        # Get all personas organized by category
+        personas_by_category = {
+            'student': Persona.query.filter_by(_category='student').all(),
+            'social': Persona.query.filter_by(_category='social').all(),
+            'achievement': Persona.query.filter_by(_category='achievement').all(),
+            'fantasy': Persona.query.filter_by(_category='fantasy').all()
+        }
+        
+        # Get all personas for iteration
+        all_personas = Persona.query.all()
+        
+        for persona in all_personas:
+            # Create user with persona alias as uid
+            user = User(
+                name=persona._alias.capitalize() + " " + persona._title,
+                uid=persona._alias,
+                password=app.config["DEFAULT_PASSWORD"],
+                role="User"
+            )
+            
+            try:
+                user.create()
+                print(f"Created user: {user.name} ({user.uid})")
+                
+                # Now assign personas to this user
+                user_persona_selections = []
+                
+                # Assign the user their namesake persona (primary identity)
+                namesake_category = persona._category
+                namesake_up = UserPersona(persona=persona, weight=2)
+                user_persona_selections.append(namesake_up)
+                
+                # Assign personas from other categories based on selection rules
+                for category, personas_list in personas_by_category.items():
+                    if category == namesake_category:
+                        continue  # Skip their primary category (already assigned)
+                    
+                    if category == 'social':
+                        # Social: Pick 2 (1 primary weight=2, 1 secondary weight=1)
+                        if len(personas_list) >= 2:
+                            social_picks = random.sample(personas_list, 2)
+                            user_persona_selections.append(UserPersona(persona=social_picks[0], weight=2))
+                            user_persona_selections.append(UserPersona(persona=social_picks[1], weight=1))
+                        elif len(personas_list) == 1:
+                            user_persona_selections.append(UserPersona(persona=personas_list[0], weight=2))
+                    else:
+                        # Student, Achievement, Fantasy: Pick 1 (weight=1)
+                        if personas_list:
+                            random_pick = random.choice(personas_list)
+                            user_persona_selections.append(UserPersona(persona=random_pick, weight=1))
+                
+                # Add all UserPersona relationships to the user
+                for up in user_persona_selections:
+                    up.user_id = user.id
+                    db.session.add(up)
+                
+                db.session.commit()
+                
+                # Print summary of assigned personas
+                persona_summary = [f"{up.persona._title} (w={up.weight})" for up in user_persona_selections]
+                print(f"  Assigned personas: {', '.join(persona_summary)}")
+                
+            except IntegrityError:
+                db.session.rollback()
+                print(f"User already exists: {persona._alias}")
+            except Exception as e:
+                db.session.rollback()
+                print(f"Error creating user {persona._alias}: {e}")
