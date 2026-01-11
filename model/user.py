@@ -370,6 +370,8 @@ class User(db.Model, UserMixin):
         }
         sections = self.read_sections()
         data.update(sections)
+        personas = self.read_personas()
+        data.update(personas)
         return data
         
     # CRUD update: updates user name, password, phone
@@ -535,6 +537,19 @@ class User(db.Model, UserMixin):
                 section_data['year'] = user_section.year  
                 sections.append(section_data)
         return {"sections": sections} 
+    
+    def read_personas(self):
+        """Reads the personas associated with the user."""
+        personas = []
+        from model.persona import UserPersona
+        user_personas = UserPersona.query.filter_by(user_id=self.id).all()
+        if user_personas:
+            for user_persona in user_personas:
+                persona_data = user_persona.persona.read()
+                persona_data['weight'] = user_persona.weight
+                persona_data['selected_at'] = user_persona.selected_at.isoformat() if user_persona.selected_at else None
+                personas.append(persona_data)
+        return {"personas": personas}
     
     def update_section(self, section_data):
         """
