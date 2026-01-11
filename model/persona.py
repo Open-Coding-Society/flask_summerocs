@@ -175,6 +175,18 @@ class Persona(db.Model):
     def alias(self):
         return self._alias
     
+    @property
+    def category(self):
+        return self._category
+    
+    @property
+    def bio_map(self):
+        return self._bio_map
+    
+    @property
+    def empathy_map(self):
+        return self._empathy_map
+    
     def __getattr__(self, name):
         """
         Generic property accessor for _bio_map and _empathy_map keys.
@@ -210,10 +222,10 @@ class Persona(db.Model):
     def read(self):
         return {
             "id": self.id,
-            "category": self._category,
-            "alias": self._alias,
-            "bio_map": self._bio_map,
-            "empathy_map": self._empathy_map
+            "category": self.category,
+            "alias": self.alias,
+            "bio_map": self.bio_map,
+            "empathy_map": self.empathy_map
         }
 
 
