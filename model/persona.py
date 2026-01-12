@@ -163,7 +163,7 @@ class Persona(db.Model):
     # Overlaps setting avoids circular dependencies with UserPersona class
     # No backref needed as User has its own 'personas' relationship
     users = db.relationship('User', secondary='user_personas', lazy='subquery',
-                            overlaps="user_personas_rel,persona,personas,user")    
+                            overlaps="user_personas_rel,user,personas")    
 
     def __init__(self, _alias, _category, _bio_map, _empathy_map=None):
         self._alias = _alias

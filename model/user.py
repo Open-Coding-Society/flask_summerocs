@@ -75,7 +75,7 @@ class Section(db.Model):
     # Overlaps setting avoids circular dependencies with UserSection class
     # No backref needed as User has its own 'sections' relationship
     users = db.relationship('User', secondary='user_sections', lazy='subquery',
-                            overlaps="section_users_rel,user_sections_rel,user,sections")    
+                            overlaps="user_sections_rel,user,sections")    
     
     # Constructor
     def __init__(self, name, abbreviation):
@@ -161,13 +161,13 @@ class User(db.Model, UserMixin):
     # Overlaps setting avoids circular dependencies with UserSection class
     # No backref needed as Section has its own 'users' relationship
     sections = db.relationship('Section', secondary='user_sections', lazy='subquery',
-                               overlaps="user_sections_rel,section,section_users_rel,user,users")
+                               overlaps="user_sections_rel,section,users")
     
     # Define many-to-many relationship with Persona model through UserPersona table
     # Overlaps setting avoids circular dependencies with UserPersona class
     # No backref needed as Persona has its own 'users' relationship
     personas = db.relationship('Persona', secondary='user_personas', lazy='subquery',
-                               overlaps="user_personas_rel,persona,users,personas")
+                               overlaps="user_personas_rel,persona,users")
     
     def __init__(self, name, uid, password=app.config["DEFAULT_PASSWORD"], kasm_server_needed=False, role="User", pfp='', grade_data=None, ap_exam=None, school="Unknown", sid=None, classes=None):
         self._name = name
