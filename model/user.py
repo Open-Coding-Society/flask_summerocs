@@ -161,6 +161,11 @@ class User(db.Model, UserMixin):
     sections = db.relationship('Section', secondary=UserSection.__table__, lazy='subquery',
                                backref=db.backref('user_sections_rel', lazy=True, viewonly=True), overlaps="user_sections_rel,section,section_users_rel,user,users")
     
+    # Define many-to-many relationship with Persona model through UserPersona table
+    # No backref needed as Persona has its own 'users' relationship
+    personas = db.relationship('Persona', secondary='user_personas', lazy='subquery',
+                               overlaps="user_personas_rel,persona,users")
+    
     def __init__(self, name, uid, password=app.config["DEFAULT_PASSWORD"], kasm_server_needed=False, role="User", pfp='', grade_data=None, ap_exam=None, school="Unknown", sid=None, classes=None):
         self._name = name
         self._uid = uid

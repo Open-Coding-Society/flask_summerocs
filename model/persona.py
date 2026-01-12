@@ -33,8 +33,8 @@ class UserPersona(db.Model):
     selected_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     
     # Define relationships
-    user = db.relationship("User", backref=db.backref("user_personas_rel", cascade="all, delete-orphan"))
-    persona = db.relationship("Persona", backref=db.backref("user_personas_rel", cascade="all, delete-orphan"))
+    user = db.relationship("User", backref=db.backref("user_personas_rel", cascade="all, delete-orphan"), overlaps="personas")
+    persona = db.relationship("Persona", backref=db.backref("user_personas_rel", cascade="all, delete-orphan"), overlaps="users")
     
     def __init__(self, user, persona, weight=1):
         self.user = user
@@ -160,10 +160,9 @@ class Persona(db.Model):
     _empathy_map = db.Column(JSON, nullable=True)  # Stores: {'says': [], 'thinks': [], 'feels': [], 'does': []}
     
     # Define many-to-many relationship with User model through UserPersona table
-    # Note: User model should add this backref:
-    # personas = db.relationship('Persona', secondary=UserPersona.__table__, lazy='subquery',
-    #                            backref=db.backref('users', lazy=True))
-    
+    # Overlaps setting avoids circular dependencies with UserPersona class
+    users = db.relationship('User', secondary='user_personas', lazy='subquery',
+                            backref=db.backref('persona_users_rel', lazy=True, viewonly=True), overlaps="user_personas_rel,persona,personas,user")    
 
     def __init__(self, _alias, _category, _bio_map, _empathy_map=None):
         self._alias = _alias
