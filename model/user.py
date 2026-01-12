@@ -43,9 +43,10 @@ class UserSection(db.Model):
     section_id = db.Column(db.Integer, db.ForeignKey('sections.id'), primary_key=True)
     year = db.Column(db.Integer)
 
-    # Define relationships with User and Section models
-    user = db.relationship("User", backref=db.backref("user_sections_rel", cascade="all, delete-orphan"), overlaps="sections")
+    # Junction table relationships: Records transactions linking User and Section
+    # Each UserSection row records a User-Section pairing (like a transaction receipt)
     # Overlaps setting silences SQLAlchemy warnings about multiple relationship paths
+    user = db.relationship("User", backref=db.backref("user_sections_rel", cascade="all, delete-orphan"), overlaps="sections")
     section = db.relationship("Section", backref=db.backref("section_users_rel", cascade="all, delete-orphan"), overlaps="users")
     
     def __init__(self, user, section):

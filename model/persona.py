@@ -32,9 +32,10 @@ class UserPersona(db.Model):
     weight = db.Column(db.Integer, default=1, nullable=False)  # 2 = primary, 1 = secondary
     selected_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     
-    # Define relationships with User and Persona models
-    user = db.relationship("User", backref=db.backref("user_personas_rel", cascade="all, delete-orphan"), overlaps="personas")
+    # Junction table relationships: Records transactions linking User and Persona
+    # Each UserPersona row records a User-Persona pairing (like a transaction receipt)
     # Overlaps setting silences SQLAlchemy warnings about multiple relationship paths
+    user = db.relationship("User", backref=db.backref("user_personas_rel", cascade="all, delete-orphan"), overlaps="personas")
     persona = db.relationship("Persona", backref=db.backref("user_personas_rel", cascade="all, delete-orphan"), overlaps="users")
     
     def __init__(self, user, persona, weight=1):
