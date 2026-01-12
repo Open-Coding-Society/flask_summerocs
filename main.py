@@ -153,6 +153,12 @@ def sections():
     sections = Section.query.all()
     return render_template("sections.html", sections=sections)
 
+@app.route('/persona/')
+@login_required
+def persona():
+    personas = Persona.query.all()
+    return render_template("persona.html", personas=personas)
+
 # Helper function to extract uploads for a user (ie PFP image)
 @app.route('/uploads/<path:filename>')
 def uploaded_file(filename):
