@@ -45,7 +45,7 @@ class UserSection(db.Model):
 
     # Define relationships with User and Section models
     user = db.relationship("User", backref=db.backref("user_sections_rel", cascade="all, delete-orphan"), overlaps="sections")
-    # Overlaps setting avoids circular dependencies with Section class
+    # Overlaps setting silences SQLAlchemy warnings about multiple relationship paths
     section = db.relationship("Section", backref=db.backref("section_users_rel", cascade="all, delete-orphan"), overlaps="users")
     
     def __init__(self, user, section):
@@ -72,7 +72,7 @@ class Section(db.Model):
     _abbreviation = db.Column(db.String(255), unique=True, nullable=False)
   
     # Define many-to-many relationship with User model through UserSection table
-    # Overlaps setting avoids circular dependencies with UserSection class
+    # Overlaps setting silences SQLAlchemy warnings about multiple relationship paths
     # No backref needed as User has its own 'sections' relationship
     users = db.relationship('User', secondary='user_sections', lazy='subquery',
                             overlaps="user_sections_rel,user,sections")    
@@ -158,13 +158,13 @@ class User(db.Model, UserMixin):
     _school = db.Column(db.String(255), default="Unknown", nullable=True)
 
     # Define many-to-many relationship with Section model through UserSection table
-    # Overlaps setting avoids circular dependencies with UserSection class
+    # Overlaps setting silences SQLAlchemy warnings about multiple relationship paths
     # No backref needed as Section has its own 'users' relationship
     sections = db.relationship('Section', secondary='user_sections', lazy='subquery',
                                overlaps="user_sections_rel,section,users")
     
     # Define many-to-many relationship with Persona model through UserPersona table
-    # Overlaps setting avoids circular dependencies with UserPersona class
+    # Overlaps setting silences SQLAlchemy warnings about multiple relationship paths
     # No backref needed as Persona has its own 'users' relationship
     personas = db.relationship('Persona', secondary='user_personas', lazy='subquery',
                                overlaps="user_personas_rel,persona,users")

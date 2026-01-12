@@ -32,8 +32,9 @@ class UserPersona(db.Model):
     weight = db.Column(db.Integer, default=1, nullable=False)  # 2 = primary, 1 = secondary
     selected_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     
-    # Define relationships
+    # Define relationships with User and Persona models
     user = db.relationship("User", backref=db.backref("user_personas_rel", cascade="all, delete-orphan"), overlaps="personas")
+    # Overlaps setting silences SQLAlchemy warnings about multiple relationship paths
     persona = db.relationship("Persona", backref=db.backref("user_personas_rel", cascade="all, delete-orphan"), overlaps="users")
     
     def __init__(self, user, persona, weight=1):
@@ -160,7 +161,7 @@ class Persona(db.Model):
     _empathy_map = db.Column(JSON, nullable=True)  # Stores: {'says': [], 'thinks': [], 'feels': [], 'does': []}
     
     # Define many-to-many relationship with User model through UserPersona table
-    # Overlaps setting avoids circular dependencies with UserPersona class
+    # Overlaps setting silences SQLAlchemy warnings about multiple relationship paths
     # No backref needed as User has its own 'personas' relationship
     users = db.relationship('User', secondary='user_personas', lazy='subquery',
                             overlaps="user_personas_rel,user,personas")    
