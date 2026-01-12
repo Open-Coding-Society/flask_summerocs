@@ -1,6 +1,6 @@
-from flask import Blueprint, request, jsonify, current_app, Response
+from flask import Blueprint, request, jsonify
 from flask_restful import Api, Resource
-from api.jwt_authorize import token_required
+from api.authorize import auth_required
 from model.persona import Persona
 from __init__ import db
 
@@ -12,7 +12,7 @@ api = Api(persona_api)
 class PersonaAPI:        
     
     class _Create(Resource):
-        @token_required("Admin")
+        @auth_required(roles="Admin")
         def post(self):
             """Create a new persona"""
             body = request.get_json()
@@ -69,7 +69,7 @@ class PersonaAPI:
                 return jsonify(json_ready)
     
     class _Update(Resource):
-        @token_required("Admin")
+        @auth_required(roles="Admin")
         def put(self, id):
             """Update an existing persona"""
             body = request.get_json()
@@ -110,7 +110,7 @@ class PersonaAPI:
                 return {'message': f'Error updating persona: {str(e)}'}, 500
     
     class _Delete(Resource):
-        @token_required("Admin")
+        @auth_required(roles="Admin")
         def delete(self, id):
             """Delete a persona"""
             persona = Persona.query.get(id)
