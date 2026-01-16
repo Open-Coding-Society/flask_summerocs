@@ -1,7 +1,8 @@
 from flask import Blueprint, request, jsonify
 from flask_restful import Api, Resource
 from api.authorize import auth_required
-from model.persona import Persona
+from model.persona import Persona, UserPersona
+from model.user import User
 from __init__ import db
 
 persona_api = Blueprint('persona_api', __name__, url_prefix='/api')
@@ -127,8 +128,173 @@ class PersonaAPI:
                 db.session.rollback()
                 return {'message': f'Error deleting persona: {str(e)}'}, 500
     
+    class _EvaluateGroup(Resource):
+        def post(self):
+            """Evaluate persona compatibility for a group"""
+            body = request.get_json()
+            
+            user_uids = body.get('user_uids', [])
+            if not user_uids:
+                return {'message': 'user_uids required'}, 400
+            
+            # Query using _uid (the actual database column, not the property)
+            users = User.query.filter(User._uid.in_(user_uids)).all()
+            
+            # Check for missing users
+            if len(users) != len(user_uids):
+                found_uids = {u.uid for u in users}  # Use .uid property for display
+                missing_uids = list(set(user_uids) - found_uids)
+                return {
+                    'message': 'Some users not found',
+                    'missing_uids': missing_uids
+                }, 404
+            
+            # Collect personas for each user
+            user_personas_list = []
+            members_detail = []
+            
+            for user in users:
+                personas = UserPersona.query.filter_by(user_id=user.id).all()
+                
+                if personas:
+                    user_personas_list.append(personas)
+                
+                members_detail.append({
+                    'uid': user.uid,  # Use property for display
+                    'name': user.name,
+                    'personas': [
+                        {
+                            'title': up.persona.title,
+                            'category': up.persona.category,
+                            'weight': up.weight
+                        }
+                        for up in personas
+                    ]
+                })
+            
+            # Handle case where no personas found
+            if not user_personas_list:
+                return {
+                    'team_score': 0.0,
+                    'members': members_detail,
+                    'evaluation': 'No personas found',
+                    'message': 'Users have no persona assignments'
+                }, 200
+            
+            # Calculate team score
+            team_score = UserPersona.calculate_team_score(user_personas_list)
+            
+            # Provide evaluation
+            if team_score >= 80:
+                evaluation = 'Excellent - Highly balanced'
+            elif team_score >= 70:
+                evaluation = 'Good - Well-balanced'
+            elif team_score >= 60:
+                evaluation = 'Fair - Moderately balanced'
+            else:
+                evaluation = 'Needs improvement'
+            
+            return {
+                'team_score': team_score,
+                'members': members_detail,
+                'evaluation': evaluation
+            }, 200
+    class _FormGroups(Resource):
+        def post(self):
+            """Form optimal groups based on personas"""
+            body = request.get_json()
+            
+            user_uids = body.get('user_uids', [])
+            group_size = body.get('group_size', 4)
+            
+            if not user_uids:
+                return {'message': 'user_uids required'}, 400
+            
+            if len(user_uids) < 2:
+                return {'message': 'Need at least 2 users'}, 400
+            
+            # Query using _uid (the actual database column)
+            users = User.query.filter(User._uid.in_(user_uids)).all()
+            
+            if len(users) != len(user_uids):
+                found_uids = {u.uid for u in users}
+                missing_uids = list(set(user_uids) - found_uids)
+                return {
+                    'message': 'Some users not found',
+                    'missing_uids': missing_uids
+                }, 404
+            
+            # Create uid->user mapping for quick lookup
+            uid_to_user = {u.uid: u for u in users}
+            
+            # Form groups using randomized search
+            import random
+            
+            best_grouping = None
+            best_avg_score = 0
+            iterations = 50
+            
+            for _ in range(iterations):
+                shuffled = user_uids.copy()
+                random.shuffle(shuffled)
+                
+                groups = []
+                remaining = shuffled.copy()
+                
+                while len(remaining) >= group_size:
+                    group_uids = remaining[:group_size]
+                    
+                    # Get users for this group
+                    group_users = [uid_to_user[uid] for uid in group_uids]
+                    
+                    # Calculate score
+                    group_personas_list = []
+                    for user in group_users:
+                        personas = UserPersona.query.filter_by(user_id=user.id).all()
+                        if personas:
+                            group_personas_list.append(personas)
+                    
+                    score = UserPersona.calculate_team_score(group_personas_list) if group_personas_list else 0.0
+                    
+                    groups.append({
+                        'user_uids': group_uids,
+                        'team_score': score
+                    })
+                    
+                    remaining = remaining[group_size:]
+                
+                # Handle leftovers
+                if remaining:
+                    group_users = [uid_to_user[uid] for uid in remaining]
+                    
+                    group_personas_list = []
+                    for user in group_users:
+                        personas = UserPersona.query.filter_by(user_id=user.id).all()
+                        if personas:
+                            group_personas_list.append(personas)
+                    
+                    score = UserPersona.calculate_team_score(group_personas_list) if group_personas_list else 0.0
+                    
+                    groups.append({
+                        'user_uids': remaining,
+                        'team_score': score
+                    })
+                
+                # Calculate average
+                avg_score = sum(g['team_score'] for g in groups) / len(groups)
+                
+                if avg_score > best_avg_score:
+                    best_avg_score = avg_score
+                    best_grouping = groups
+            
+            return {
+                'groups': best_grouping,
+                'average_score': round(best_avg_score, 2)
+            }, 200    
     # Building RESTful API endpoints
     api.add_resource(_Create, '/persona/create')
     api.add_resource(_Read, '/persona', '/persona/<int:id>')
     api.add_resource(_Update, '/persona/update/<int:id>')
     api.add_resource(_Delete, '/persona/delete/<int:id>')
+    api.add_resource(_EvaluateGroup, '/persona/evaluate-group')
+    api.add_resource(_FormGroups, '/persona/form-groups')
