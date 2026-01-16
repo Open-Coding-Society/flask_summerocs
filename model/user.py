@@ -10,8 +10,6 @@ import json
 from __init__ import app, db
 from model.github import GitHubUser
 from model.kasm import KasmUser
-from model.stocks import StockUser
-
 
 """ Helper Functions """
 
@@ -45,9 +43,10 @@ class UserSection(db.Model):
     section_id = db.Column(db.Integer, db.ForeignKey('sections.id'), primary_key=True)
     year = db.Column(db.Integer)
 
-    # Define relationships with User and Section models 
-    user = db.relationship("User", backref=db.backref("user_sections_rel", cascade="all, delete-orphan"))
-    # Overlaps setting avoids cicular dependencies with Section class.
+    # Junction table relationships: Records transactions linking User and Section
+    # Each UserSection row records a User-Section pairing (like a transaction receipt)
+    # Overlaps setting silences SQLAlchemy warnings about multiple relationship paths
+    user = db.relationship("User", backref=db.backref("user_sections_rel", cascade="all, delete-orphan"), overlaps="sections")
     section = db.relationship("Section", backref=db.backref("section_users_rel", cascade="all, delete-orphan"), overlaps="users")
     
     def __init__(self, user, section):
@@ -74,9 +73,10 @@ class Section(db.Model):
     _abbreviation = db.Column(db.String(255), unique=True, nullable=False)
   
     # Define many-to-many relationship with User model through UserSection table
-    # Overlaps setting avoids cicular dependencies with UserSection class
-    users = db.relationship('User', secondary=UserSection.__table__, lazy='subquery',
-                            backref=db.backref('section_users_rel', lazy=True, viewonly=True), overlaps="section_users_rel,user_sections_rel,user")    
+    # Overlaps setting silences SQLAlchemy warnings about multiple relationship paths
+    # No backref needed as User has its own 'sections' relationship
+    users = db.relationship('User', secondary='user_sections', lazy='subquery',
+                            overlaps="user_sections_rel,user,sections")    
     
     # Constructor
     def __init__(self, name, abbreviation):
@@ -158,14 +158,18 @@ class User(db.Model, UserMixin):
     _class = db.Column(db.JSON, unique=False, nullable=True)
     _school = db.Column(db.String(255), default="Unknown", nullable=True)
 
-    # Define many-to-many relationship with Section model through UserSection table 
-    # Overlaps setting avoids cicular dependencies with UserSection class
-    sections = db.relationship('Section', secondary=UserSection.__table__, lazy='subquery',
-                               backref=db.backref('user_sections_rel', lazy=True, viewonly=True), overlaps="user_sections_rel,section,section_users_rel,user,users")
+    # Define many-to-many relationship with Section model through UserSection table
+    # Overlaps setting silences SQLAlchemy warnings about multiple relationship paths
+    # No backref needed as Section has its own 'users' relationship
+    sections = db.relationship('Section', secondary='user_sections', lazy='subquery',
+                               overlaps="user_sections_rel,section,users")
     
-    # Define one-to-one relationship with StockUser model
-    stock_user = db.relationship("StockUser", backref=db.backref("users", cascade="all"), lazy=True, uselist=False)
-
+    # Define many-to-many relationship with Persona model through UserPersona table
+    # Overlaps setting silences SQLAlchemy warnings about multiple relationship paths
+    # No backref needed as Persona has its own 'users' relationship
+    personas = db.relationship('Persona', secondary='user_personas', lazy='subquery',
+                               overlaps="user_personas_rel,persona,users")
+    
     def __init__(self, name, uid, password=app.config["DEFAULT_PASSWORD"], kasm_server_needed=False, role="User", pfp='', grade_data=None, ap_exam=None, school="Unknown", sid=None, classes=None):
         self._name = name
         self._uid = uid
@@ -370,6 +374,8 @@ class User(db.Model, UserMixin):
         }
         sections = self.read_sections()
         data.update(sections)
+        personas = self.read_personas()
+        data.update(personas)
         return data
         
     # CRUD update: updates user name, password, phone
@@ -427,21 +433,26 @@ class User(db.Model, UserMixin):
                 self.set_email()
 
         # Make a KasmUser object to interact with the Kasm API
-        kasm_user = KasmUser()
+        # Wrap in try-except to ensure db.session.commit() occurs even if Kasm operations fail
+        try:
+            kasm_user = KasmUser()
 
-        # Update Kasm server group membership if needed
-        if self.kasm_server_needed:
-            # UID has changed, delete old Kasm user if it exists
-            if old_uid != self.uid:
-                kasm_user.delete(old_uid)
-            # Create or update the user in Kasm, including a password
-            kasm_user.post(self.name, self.uid, password if password else app.config["DEFAULT_PASSWORD"])
-            # User is transtioning from non-Kasm to Kasm user, thus it requires posting all groups to Kasm
-            if not old_kasm_server_needed:
-                kasm_user.post_groups(self.uid, [section.abbreviation for section in self.sections])
-        # User is transitioning from Kasm user to non-Kasm user, thus it requires cleanup of defunct Kasm user
-        elif old_kasm_server_needed:
-            kasm_user.delete(self.uid)
+            # Update Kasm server group membership if needed
+            if self.kasm_server_needed:
+                # UID has changed, delete old Kasm user if it exists
+                if old_uid != self.uid:
+                    kasm_user.delete(old_uid)
+                # Create or update the user in Kasm, including a password
+                kasm_user.post(self.name, self.uid, password if password else app.config["DEFAULT_PASSWORD"])
+                # User is transtioning from non-Kasm to Kasm user, thus it requires posting all groups to Kasm
+                if not old_kasm_server_needed:
+                    kasm_user.post_groups(self.uid, [section.abbreviation for section in self.sections])
+            # User is transitioning from Kasm user to non-Kasm user, thus it requires cleanup of defunct Kasm user
+            elif old_kasm_server_needed:
+                kasm_user.delete(self.uid)
+        except Exception as e:
+            # Log the error but continue to db.session.commit()
+            print(f"Kasm API error for user {self.uid}: {e}")
 
         try:
             db.session.commit()
@@ -531,6 +542,16 @@ class User(db.Model, UserMixin):
                 sections.append(section_data)
         return {"sections": sections} 
     
+    def read_personas(self):
+        """Reads the personas associated with the user."""
+        personas = []
+        from model.persona import UserPersona
+        user_personas = UserPersona.query.filter_by(user_id=self.id).all()
+        if user_personas:
+            for user_persona in user_personas:
+                personas.append(user_persona.read())
+        return {"personas": personas}
+    
     def update_section(self, section_data):
         """
         Updates the year enrolled for a given section.
@@ -608,23 +629,6 @@ class User(db.Model, UserMixin):
             if os.path.exists(old_path):
                 os.rename(old_path, new_path)
 
-    def add_stockuser(self):
-        """
-        Add 1-to-1 stock user to the user's record. 
-        """
-        if not self.stock_user:
-            self.stock_user = StockUser(uid=self._uid, stockmoney=100000)
-            db.session.commit()
-        return self 
-            
-    def read_stockuser(self):
-        """
-        Read the stock user daata associated with the user.
-        """
-        if self.stock_user:
-            return self.stock_user.read()
-        return None
-    
 """Database Creation and Testing """
 
 # Builds working data set for testing
