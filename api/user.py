@@ -6,6 +6,7 @@ from __init__ import app, db
 from api.jwt_authorize import token_required
 from model.user import User
 from model.github import GitHubUser
+import os
 
 user_api = Blueprint('user_api', __name__,
                    url_prefix='/api')
@@ -358,7 +359,7 @@ class UserAPI:
                             algorithm="HS256"
                         )
                         # Return JSON response with cookie
-                        is_production = not (request.host.startswith('localhost') or request.host.startswith('127.0.0.1'))
+                        is_production = os.environ.get('IS_PRODUCTION', 'false').lower() == 'true'
                         
                         # Create JSON response
                         response_data = {
@@ -381,7 +382,8 @@ class UserAPI:
                                 secure=True,
                                 httponly=True,
                                 path='/',
-                                samesite='None'
+                                samesite='None',
+                                domain='.opencodingsociety.com'
                             )
                         else:
                             resp.set_cookie(
@@ -428,7 +430,7 @@ class UserAPI:
                 
                 # Prepare a response indicating the token has been invalidated
                 resp = Response("Token invalidated successfully")
-                is_production = not (request.host.startswith('localhost') or request.host.startswith('127.0.0.1'))
+                is_production = os.environ.get('IS_PRODUCTION', 'false').lower() == 'true'
                 if is_production:
                     resp.set_cookie(
                         current_app.config["JWT_TOKEN_NAME"],
@@ -437,7 +439,9 @@ class UserAPI:
                         secure=True,
                         httponly=True,
                         path='/',
-                        samesite='None'
+                        samesite='None',
+                        domain='.opencodingsociety.com'
+                
                     )
                 else:
                     resp.set_cookie(
