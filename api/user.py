@@ -20,8 +20,13 @@ class UserAPI:
         def get(self):
             ''' Retrieve the current user from the token_required authentication check '''
             current_user = g.current_user
-            ''' Return the current user as a json object '''
-            return jsonify(current_user.read())
+            ''' Return the current user as a json object with role information '''
+            user_data = current_user.read()
+            # Add role information to response
+            user_data['role'] = current_user.role
+            user_data['is_admin'] = current_user.is_admin()
+            user_data['is_teacher'] = current_user.is_teacher()
+            return jsonify(user_data)
     
     class _BULK(Resource):  # Users API operation for Create, Read, Update, Delete 
         def post(self):
