@@ -291,6 +291,84 @@ class PersonaAPI:
                 'groups': best_grouping,
                 'average_score': round(best_avg_score, 2)
             }, 200    
+        
+    # Add these two classes to your PersonaAPI class in persona.py
+
+    class _UserPersona(Resource):
+        @auth_required()
+        def post(self):
+            """User selects their persona"""
+            body = request.get_json()
+            persona_id = body.get('persona_id')
+            weight = body.get('weight', 100)
+            
+            if not persona_id:
+                return {'message': 'persona_id is required'}, 400
+            
+            # Get current user from JWT
+            current_user = User.query.filter_by(_uid=request.user.get('uid')).first()
+            if not current_user:
+                return {'message': 'User not found'}, 404
+            
+            # Verify persona exists
+            persona = Persona.query.get(persona_id)
+            if not persona:
+                return {'message': 'Persona not found'}, 404
+            
+            # Check if already assigned
+            existing = UserPersona.query.filter_by(
+                user_id=current_user.id,
+                persona_id=persona_id
+            ).first()
+            
+            if existing:
+                return {'message': 'Persona already selected'}, 400
+            
+            # Create assignment
+            user_persona = UserPersona(
+                user_id=current_user.id,
+                persona_id=persona_id,
+                weight=weight
+            )
+            
+            try:
+                db.session.add(user_persona)
+                db.session.commit()
+                return {'message': 'Persona selected', 'persona_id': persona_id}, 201
+            except Exception as e:
+                db.session.rollback()
+                return {'message': f'Error: {str(e)}'}, 500
+
+    class _UserPersonaDelete(Resource):
+        @auth_required()
+        def delete(self, persona_id):
+            """User removes their persona"""
+            # Get current user from JWT
+            current_user = User.query.filter_by(_uid=request.user.get('uid')).first()
+            if not current_user:
+                return {'message': 'User not found'}, 404
+            
+            # Find assignment
+            user_persona = UserPersona.query.filter_by(
+                user_id=current_user.id,
+                persona_id=persona_id
+            ).first()
+            
+            if not user_persona:
+                return {'message': 'Persona not assigned'}, 404
+            
+            try:
+                db.session.delete(user_persona)
+                db.session.commit()
+                return {'message': 'Persona removed'}, 200
+            except Exception as e:
+                db.session.rollback()
+                return {'message': f'Error: {str(e)}'}, 500
+
+    # Add these lines at the bottom where you have the other api.add_resource() calls:
+    api.add_resource(_UserPersona, '/user/persona')
+    api.add_resource(_UserPersonaDelete, '/user/persona/<int:persona_id>')
+
     # Building RESTful API endpoints
     api.add_resource(_Create, '/persona/create')
     api.add_resource(_Read, '/persona', '/persona/<int:id>')
