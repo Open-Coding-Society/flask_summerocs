@@ -767,6 +767,209 @@ class ExportUserPersonas(Resource):
         return jsonify({'user_personas': result, 'count': len(result)})
 
 
+# ============ Chunked Import Endpoints ============
+# These allow importing data one type at a time to avoid timeouts
+
+class ImportSections(Resource):
+    """Import sections only"""
+    @token_required()
+    def post(self):
+        current_user = g.current_user
+        if current_user.role != 'Admin':
+            return {'message': 'Admin privileges required'}, 403
+        
+        data = request.get_json()
+        sections_data = data.get('sections', [])
+        
+        try:
+            result = ImportAllData()._import_sections(sections_data)
+            db.session.commit()
+            return jsonify({'sections': result, 'message': 'Sections import complete'})
+        except Exception as e:
+            db.session.rollback()
+            return {'message': f'Import failed: {str(e)}'}, 500
+
+
+class ImportUsers(Resource):
+    """Import users only"""
+    @token_required()
+    def post(self):
+        current_user = g.current_user
+        if current_user.role != 'Admin':
+            return {'message': 'Admin privileges required'}, 403
+        
+        data = request.get_json()
+        users_data = data.get('users', [])
+        
+        try:
+            result = ImportAllData()._import_users(users_data)
+            db.session.commit()
+            return jsonify({'users': result, 'message': 'Users import complete'})
+        except Exception as e:
+            db.session.rollback()
+            return {'message': f'Import failed: {str(e)}'}, 500
+
+
+class ImportTopics(Resource):
+    """Import topics only"""
+    @token_required()
+    def post(self):
+        current_user = g.current_user
+        if current_user.role != 'Admin':
+            return {'message': 'Admin privileges required'}, 403
+        
+        data = request.get_json()
+        topics_data = data.get('topics', [])
+        
+        try:
+            result = ImportAllData()._import_topics(topics_data)
+            db.session.commit()
+            return jsonify({'topics': result, 'message': 'Topics import complete'})
+        except Exception as e:
+            db.session.rollback()
+            return {'message': f'Import failed: {str(e)}'}, 500
+
+
+class ImportMicroblogs(Resource):
+    """Import microblogs only"""
+    @token_required()
+    def post(self):
+        current_user = g.current_user
+        if current_user.role != 'Admin':
+            return {'message': 'Admin privileges required'}, 403
+        
+        data = request.get_json()
+        microblogs_data = data.get('microblogs', [])
+        
+        try:
+            result = ImportAllData()._import_microblogs(microblogs_data)
+            db.session.commit()
+            return jsonify({'microblogs': result, 'message': 'Microblogs import complete'})
+        except Exception as e:
+            db.session.rollback()
+            return {'message': f'Import failed: {str(e)}'}, 500
+
+
+class ImportPosts(Resource):
+    """Import posts only"""
+    @token_required()
+    def post(self):
+        current_user = g.current_user
+        if current_user.role != 'Admin':
+            return {'message': 'Admin privileges required'}, 403
+        
+        data = request.get_json()
+        posts_data = data.get('posts', [])
+        
+        try:
+            result = ImportAllData()._import_posts(posts_data)
+            db.session.commit()
+            return jsonify({'posts': result, 'message': 'Posts import complete'})
+        except Exception as e:
+            db.session.rollback()
+            return {'message': f'Import failed: {str(e)}'}, 500
+
+
+class ImportClassrooms(Resource):
+    """Import classrooms only"""
+    @token_required()
+    def post(self):
+        current_user = g.current_user
+        if current_user.role != 'Admin':
+            return {'message': 'Admin privileges required'}, 403
+        
+        data = request.get_json()
+        classrooms_data = data.get('classrooms', [])
+        
+        try:
+            result = ImportAllData()._import_classrooms(classrooms_data)
+            db.session.commit()
+            return jsonify({'classrooms': result, 'message': 'Classrooms import complete'})
+        except Exception as e:
+            db.session.rollback()
+            return {'message': f'Import failed: {str(e)}'}, 500
+
+
+class ImportFeedback(Resource):
+    """Import feedback only"""
+    @token_required()
+    def post(self):
+        current_user = g.current_user
+        if current_user.role != 'Admin':
+            return {'message': 'Admin privileges required'}, 403
+        
+        data = request.get_json()
+        feedback_data = data.get('feedback', [])
+        
+        try:
+            result = ImportAllData()._import_feedback(feedback_data)
+            db.session.commit()
+            return jsonify({'feedback': result, 'message': 'Feedback import complete'})
+        except Exception as e:
+            db.session.rollback()
+            return {'message': f'Import failed: {str(e)}'}, 500
+
+
+class ImportStudy(Resource):
+    """Import study records only"""
+    @token_required()
+    def post(self):
+        current_user = g.current_user
+        if current_user.role != 'Admin':
+            return {'message': 'Admin privileges required'}, 403
+        
+        data = request.get_json()
+        study_data = data.get('study', [])
+        
+        try:
+            result = ImportAllData()._import_study(study_data)
+            db.session.commit()
+            return jsonify({'study': result, 'message': 'Study import complete'})
+        except Exception as e:
+            db.session.rollback()
+            return {'message': f'Import failed: {str(e)}'}, 500
+
+
+class ImportPersonas(Resource):
+    """Import personas only"""
+    @token_required()
+    def post(self):
+        current_user = g.current_user
+        if current_user.role != 'Admin':
+            return {'message': 'Admin privileges required'}, 403
+        
+        data = request.get_json()
+        personas_data = data.get('personas', [])
+        
+        try:
+            result = ImportAllData()._import_personas(personas_data)
+            db.session.commit()
+            return jsonify({'personas': result, 'message': 'Personas import complete'})
+        except Exception as e:
+            db.session.rollback()
+            return {'message': f'Import failed: {str(e)}'}, 500
+
+
+class ImportUserPersonas(Resource):
+    """Import user-persona associations only"""
+    @token_required()
+    def post(self):
+        current_user = g.current_user
+        if current_user.role != 'Admin':
+            return {'message': 'Admin privileges required'}, 403
+        
+        data = request.get_json()
+        user_personas_data = data.get('user_personas', [])
+        
+        try:
+            result = ImportAllData()._import_user_personas(user_personas_data)
+            db.session.commit()
+            return jsonify({'user_personas': result, 'message': 'User personas import complete'})
+        except Exception as e:
+            db.session.rollback()
+            return {'message': f'Import failed: {str(e)}'}, 500
+
+
 # Register endpoints
 api.add_resource(ExportAllData, '/all')
 api.add_resource(ImportAllData, '/import')
@@ -782,3 +985,15 @@ api.add_resource(ExportFeedback, '/feedback')
 api.add_resource(ExportStudy, '/study')
 api.add_resource(ExportPersonas, '/personas')
 api.add_resource(ExportUserPersonas, '/user_personas')
+
+# Chunked import endpoints (POST to same paths as export)
+api.add_resource(ImportSections, '/import/sections')
+api.add_resource(ImportUsers, '/import/users')
+api.add_resource(ImportTopics, '/import/topics')
+api.add_resource(ImportMicroblogs, '/import/microblogs')
+api.add_resource(ImportPosts, '/import/posts')
+api.add_resource(ImportClassrooms, '/import/classrooms')
+api.add_resource(ImportFeedback, '/import/feedback')
+api.add_resource(ImportStudy, '/import/study')
+api.add_resource(ImportPersonas, '/import/personas')
+api.add_resource(ImportUserPersonas, '/import/user_personas')
