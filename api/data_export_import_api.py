@@ -308,9 +308,31 @@ class ImportAllData(Resource):
                 if existing:
                     continue
 
-                # Create user (the /api/user endpoint handles this better)
-                # For now, we'll skip and let the original endpoint handle it
-                # This function is more for reference
+                # Create new user
+                user = User(
+                    name=user_data.get('name'),
+                    uid=user_data.get('uid'),
+                    password=user_data.get('password', ''),
+                    email=user_data.get('email'),
+                    sid=user_data.get('sid'),
+                    role=user_data.get('role', 'User'),
+                    pfp=user_data.get('pfp'),
+                    kasm_server_needed=user_data.get('kasm_server_needed', False),
+                    grade_data=user_data.get('grade_data') or user_data.get('gradeData'),
+                    ap_exam=user_data.get('ap_exam') or user_data.get('apExam'),
+                    school=user_data.get('school')
+                )
+
+                # Add sections if provided
+                if 'sections' in user_data and user_data['sections']:
+                    for section_data in user_data['sections']:
+                        section_abbrev = section_data.get('abbreviation')
+                        if section_abbrev:
+                            section = Section.query.filter_by(_abbreviation=section_abbrev).first()
+                            if section:
+                                user.sections.append(section)
+
+                user.create()
                 imported += 1
             except Exception as e:
                 failed += 1
