@@ -1,6 +1,6 @@
 from flask import Blueprint, g, request, jsonify
 from flask_restful import Api, Resource
-from api.authorize import auth_required
+from api.authorize import auth_required, token_required
 from model.persona import Persona, UserPersona
 from model.user import User
 from __init__ import db
@@ -292,12 +292,11 @@ class PersonaAPI:
                 'average_score': round(best_avg_score, 2)
             }, 200    
         
-    # Add these two classes to your PersonaAPI class in persona.py
-
+    
     class _UserPersona(Resource):
-        @auth_required()
+        @token_required()
         def post(self):
-            """User selects their persona"""
+            """User selects their persona (replaces existing if any)"""
             body = request.get_json()
             persona_id = body.get('persona_id')
             weight = body.get('weight', 1)
@@ -305,17 +304,17 @@ class PersonaAPI:
             if not persona_id:
                 return {'message': 'persona_id is required'}, 400
             
-            # Get current user
-            current_user = g.current_user  
+            # Get current user FROM g.current_user
+            current_user = g.current_user
             if not current_user:
                 return {'message': 'User not found'}, 404
             
-            # Verify persona exists - get the Persona OBJECT
+            # Verify persona exists
             persona = Persona.query.get(persona_id)
             if not persona:
                 return {'message': 'Persona not found'}, 404
             
-            # Check if already assigned
+            # Check if user already has THIS exact persona
             existing = UserPersona.query.filter_by(
                 user_id=current_user.id,
                 persona_id=persona_id
@@ -324,10 +323,12 @@ class PersonaAPI:
             if existing:
                 return {'message': 'Persona already selected'}, 400
             
-            # Create assignment - PASS OBJECTS, not IDs
+            UserPersona.query.filter_by(user_id=current_user.id).delete()
+            
+            # Create new assignment
             user_persona = UserPersona(
-                user=current_user,      # Pass User object
-                persona=persona,        # Pass Persona object
+                user=current_user,
+                persona=persona,
                 weight=weight
             )
             
@@ -338,12 +339,23 @@ class PersonaAPI:
             except Exception as e:
                 db.session.rollback()
                 return {'message': f'Error: {str(e)}'}, 500
-    class _UserPersonaDelete(Resource):
-        @auth_required()
+    class _GetUserPersonas(Resource):
+        @token_required()  
+        def get(self):
+            """Get current user's personas"""
+            current_user = g.current_user  
+            if not current_user:
+                return {'message': 'User not found'}, 404
+            
+            user_personas = UserPersona.query.filter_by(user_id=current_user.id).all()
+            personas_data = [up.read() for up in user_personas]
+            return {'personas': personas_data}, 200
+    
+    class _DeleteUserPersona(Resource):
+        @token_required()  
         def delete(self, persona_id):
             """User removes their persona"""
-            # Get current user from g object (FIXED)
-            current_user = g.current_user  # Change this line
+            current_user = g.current_user  
             if not current_user:
                 return {'message': 'User not found'}, 404
             
@@ -362,14 +374,12 @@ class PersonaAPI:
                 return {'message': 'Persona removed'}, 200
             except Exception as e:
                 db.session.rollback()
-                return {'message': f'Error: {str(e)}'}, 500  
-                # Add these lines at the bottom where you have the other api.add_resource() calls:
-        
-        
-        
-    api.add_resource(_UserPersona, '/user/persona')
-    api.add_resource(_UserPersonaDelete, '/user/persona/<int:persona_id>')
+                return {'message': f'Error: {str(e)}'}, 500
 
+    api.add_resource(_UserPersona, '/user/persona')
+    api.add_resource(_GetUserPersonas, '/user/personas')
+    api.add_resource(_DeleteUserPersona, '/user/persona/<int:persona_id>')
+    
     # Building RESTful API endpoints
     api.add_resource(_Create, '/persona/create')
     api.add_resource(_Read, '/persona', '/persona/<int:id>')
