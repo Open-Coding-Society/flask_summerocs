@@ -100,7 +100,7 @@ class ExportAllData(Resource):
             if mb.user:
                 mb_data['userUid'] = mb.user.uid
             if mb.topic:
-                mb_data['topicPath'] = mb.topic.page_path
+                mb_data['topicPath'] = mb.topic._page_path
             result.append(mb_data)
         return result
 
@@ -628,6 +628,153 @@ class ImportAllData(Resource):
         return {'imported': imported, 'failed': failed, 'errors': errors}
 
 
+# Individual export endpoints for chunked exports
+class ExportSections(Resource):
+    @token_required()
+    def get(self):
+        current_user = g.current_user
+        if current_user.role != 'Admin':
+            return {'message': 'Admin privileges required'}, 403
+        sections = Section.query.all()
+        return jsonify({'sections': [s.read() for s in sections], 'count': len(sections)})
+
+class ExportUsers(Resource):
+    @token_required()
+    def get(self):
+        current_user = g.current_user
+        if current_user.role != 'Admin':
+            return {'message': 'Admin privileges required'}, 403
+        users = User.query.all()
+        result = []
+        for user in users:
+            user_data = user.read()
+            user_data['sections'] = [s.read() for s in user.sections]
+            result.append(user_data)
+        return jsonify({'users': result, 'count': len(result)})
+
+class ExportTopics(Resource):
+    @token_required()
+    def get(self):
+        current_user = g.current_user
+        if current_user.role != 'Admin':
+            return {'message': 'Admin privileges required'}, 403
+        topics = Topic.query.all()
+        return jsonify({'topics': [t.read() for t in topics], 'count': len(topics)})
+
+class ExportMicroblogs(Resource):
+    @token_required()
+    def get(self):
+        current_user = g.current_user
+        if current_user.role != 'Admin':
+            return {'message': 'Admin privileges required'}, 403
+        microblogs = MicroBlog.query.all()
+        result = []
+        for mb in microblogs:
+            mb_data = mb.read()
+            if mb.user:
+                mb_data['userUid'] = mb.user.uid
+            if mb.topic:
+                mb_data['topicPath'] = mb.topic._page_path
+            result.append(mb_data)
+        return jsonify({'microblogs': result, 'count': len(result)})
+
+class ExportPosts(Resource):
+    @token_required()
+    def get(self):
+        current_user = g.current_user
+        if current_user.role != 'Admin':
+            return {'message': 'Admin privileges required'}, 403
+        posts = Post.query.all()
+        result = []
+        for post in posts:
+            post_data = post.read()
+            if post.user:
+                post_data['userUid'] = post.user.uid
+            result.append(post_data)
+        return jsonify({'posts': result, 'count': len(result)})
+
+class ExportClassrooms(Resource):
+    @token_required()
+    def get(self):
+        current_user = g.current_user
+        if current_user.role != 'Admin':
+            return {'message': 'Admin privileges required'}, 403
+        classrooms = Classroom.query.all()
+        result = []
+        for classroom in classrooms:
+            classroom_data = classroom.to_dict()
+            owner = User.query.get(classroom.owner_teacher_id)
+            if owner:
+                classroom_data['ownerUid'] = owner.uid
+            classroom_data['studentUids'] = [s.uid for s in classroom.students.all()]
+            result.append(classroom_data)
+        return jsonify({'classrooms': result, 'count': len(result)})
+
+class ExportFeedback(Resource):
+    @token_required()
+    def get(self):
+        current_user = g.current_user
+        if current_user.role != 'Admin':
+            return {'message': 'Admin privileges required'}, 403
+        feedback_items = Feedback.query.all()
+        return jsonify({'feedback': [f.read() for f in feedback_items], 'count': len(feedback_items)})
+
+class ExportStudy(Resource):
+    @token_required()
+    def get(self):
+        current_user = g.current_user
+        if current_user.role != 'Admin':
+            return {'message': 'Admin privileges required'}, 403
+        study_records = Study.query.all()
+        result = []
+        for study in study_records:
+            study_data = study.to_dict()
+            if study.user_id:
+                user = User.query.get(study.user_id)
+                if user:
+                    study_data['userUid'] = user.uid
+            result.append(study_data)
+        return jsonify({'study': result, 'count': len(result)})
+
+class ExportPersonas(Resource):
+    @token_required()
+    def get(self):
+        current_user = g.current_user
+        if current_user.role != 'Admin':
+            return {'message': 'Admin privileges required'}, 403
+        personas = Persona.query.all()
+        return jsonify({'personas': [p.read() for p in personas], 'count': len(personas)})
+
+class ExportUserPersonas(Resource):
+    @token_required()
+    def get(self):
+        current_user = g.current_user
+        if current_user.role != 'Admin':
+            return {'message': 'Admin privileges required'}, 403
+        user_personas = UserPersona.query.all()
+        result = []
+        for up in user_personas:
+            result.append({
+                'userUid': up.user.uid if up.user else None,
+                'personaAlias': up.persona.alias if up.persona else None,
+                'weight': up.weight,
+                'selectedAt': up.selected_at.isoformat() if up.selected_at else None
+            })
+        return jsonify({'user_personas': result, 'count': len(result)})
+
+
 # Register endpoints
 api.add_resource(ExportAllData, '/all')
 api.add_resource(ImportAllData, '/import')
+
+# Chunked export endpoints
+api.add_resource(ExportSections, '/sections')
+api.add_resource(ExportUsers, '/users')
+api.add_resource(ExportTopics, '/topics')
+api.add_resource(ExportMicroblogs, '/microblogs')
+api.add_resource(ExportPosts, '/posts')
+api.add_resource(ExportClassrooms, '/classrooms')
+api.add_resource(ExportFeedback, '/feedback')
+api.add_resource(ExportStudy, '/study')
+api.add_resource(ExportPersonas, '/personas')
+api.add_resource(ExportUserPersonas, '/user_personas')
