@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, g, request, jsonify
 from flask_restful import Api, Resource
 from api.authorize import auth_required
 from model.persona import Persona, UserPersona
@@ -300,17 +300,17 @@ class PersonaAPI:
             """User selects their persona"""
             body = request.get_json()
             persona_id = body.get('persona_id')
-            weight = body.get('weight', 100)
+            weight = body.get('weight', 1)
             
             if not persona_id:
                 return {'message': 'persona_id is required'}, 400
             
-            # Get current user from JWT
-            current_user = User.query.filter_by(_uid=request.user.get('uid')).first()
+            # Get current user
+            current_user = g.current_user  
             if not current_user:
                 return {'message': 'User not found'}, 404
             
-            # Verify persona exists
+            # Verify persona exists - get the Persona OBJECT
             persona = Persona.query.get(persona_id)
             if not persona:
                 return {'message': 'Persona not found'}, 404
@@ -324,10 +324,10 @@ class PersonaAPI:
             if existing:
                 return {'message': 'Persona already selected'}, 400
             
-            # Create assignment
+            # Create assignment - PASS OBJECTS, not IDs
             user_persona = UserPersona(
-                user_id=current_user.id,
-                persona_id=persona_id,
+                user=current_user,      # Pass User object
+                persona=persona,        # Pass Persona object
                 weight=weight
             )
             
@@ -338,13 +338,12 @@ class PersonaAPI:
             except Exception as e:
                 db.session.rollback()
                 return {'message': f'Error: {str(e)}'}, 500
-
     class _UserPersonaDelete(Resource):
         @auth_required()
         def delete(self, persona_id):
             """User removes their persona"""
-            # Get current user from JWT
-            current_user = User.query.filter_by(_uid=request.user.get('uid')).first()
+            # Get current user from g object (FIXED)
+            current_user = g.current_user  # Change this line
             if not current_user:
                 return {'message': 'User not found'}, 404
             
@@ -363,9 +362,11 @@ class PersonaAPI:
                 return {'message': 'Persona removed'}, 200
             except Exception as e:
                 db.session.rollback()
-                return {'message': f'Error: {str(e)}'}, 500
-
-    # Add these lines at the bottom where you have the other api.add_resource() calls:
+                return {'message': f'Error: {str(e)}'}, 500  
+                # Add these lines at the bottom where you have the other api.add_resource() calls:
+        
+        
+        
     api.add_resource(_UserPersona, '/user/persona')
     api.add_resource(_UserPersonaDelete, '/user/persona/<int:persona_id>')
 
