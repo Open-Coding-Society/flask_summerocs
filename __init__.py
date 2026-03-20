@@ -27,39 +27,26 @@ login_manager.init_app(app)
 
 
 # Allowed servers for cross-origin resource sharing (CORS)
-def check_origin(origin):
-    """
-    Check if the origin is allowed.
-    - Explicitly allow localhost and specific domains
-    - Dynamically allow any subdomain of opencodingsociety.com
-    """
-    # Static allowed origins
-    static_origins = [
-        'http://localhost:4500',
-        'http://127.0.0.1:4500',
-        'http://localhost:4599',
-        'http://127.0.0.1:4599',
-        'http://localhost:4600',
-        'http://127.0.0.1:4600',
-        'http://localhost:4000',
-        'http://127.0.0.1:4000',
-        'https://open-coding-society.github.io',
-    ]
-    
-    # Check static origins
-    if origin in static_origins:
-        return True
-    
-    # Dynamic check for any opencodingsociety.com subdomain
-    if origin and (origin.endswith('.opencodingsociety.com') or origin == 'https://opencodingsociety.com'):
-        return True
-    
-    return False
+# Static allowed origins for local development
+allowed_origins = [
+    'http://localhost:4500',
+    'http://127.0.0.1:4500',
+    'http://localhost:4599',
+    'http://127.0.0.1:4599',
+    'http://localhost:4600',
+    'http://127.0.0.1:4600',
+    'http://localhost:4000',
+    'http://127.0.0.1:4000',
+    'https://open-coding-society.github.io',
+    # Regex pattern to match any subdomain of opencodingsociety.com
+    r'https://.*\.opencodingsociety\.com',
+    'https://opencodingsociety.com',
+]
 
 cors = CORS(
    app,
    supports_credentials=True,
-   origins=check_origin,
+   origins=allowed_origins,
    methods=["GET", "POST", "PUT", "OPTIONS"]
 )
 
