@@ -1,22 +1,31 @@
 # api/api_ainpc.py
-import os
-import requests
-from flask import Blueprint, request, jsonify
-from datetime import datetime
-from dotenv import load_dotenv
+"""
+=============================================================================
+AI NPC API - Conversational NPCs powered by Gemini
+=============================================================================
+Provides personality-driven conversational NPCs for game/educational contexts.
+Uses the same proven Gemini API approach as gemini_api.py.
 
-# Load environment variables from .env file first
-load_dotenv()
+FEATURES:
+- Multiple NPC personalities (history expert, merchant, guard, wizard, innkeeper)
+- Per-session conversation history (maintains context across messages)
+- Automatic fallback responses when API unavailable
+- Knowledge context injection for educational content
+
+ENDPOINTS:
+- POST /api/ainpc/prompt   - Send message to NPC, get response
+- POST /api/ainpc/greeting - Get NPC greeting and reset conversation
+- POST /api/ainpc/reset    - Clear conversation history
+- GET  /api/ainpc/test     - Test API availability
+- GET  /api/ainpc/status/<session_id> - Check conversation status
+=============================================================================
+"""
+from __init__ import app
+import requests
+from flask import Blueprint, request, jsonify, current_app
 
 # Blueprint for AI NPC API
 ainpc_api = Blueprint('ainpc_api', __name__, url_prefix='/api/ainpc')
-
-# Load Gemini API key from environment
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-if not GEMINI_API_KEY:
-    print("⚠️ WARNING: GEMINI_API_KEY not set in environment!")
-else:
-    print("✓ GEMINI_API_KEY loaded successfully!")
 
 # In-memory conversation history per NPC session
 conversation_history = {}
@@ -50,9 +59,13 @@ npc_personalities = {
 }
 
 
-@ainpc_api.route('/prompt', methods=['POST'])
+@ainpc_api.route('/prompt', methods=['POST', 'OPTIONS'])
 def ai_npc_prompt():
     """Main endpoint: receive user message and return AI NPC response"""
+    # Handle preflight OPTIONS request
+    if request.method == 'OPTIONS':
+        return '', 204
+    
     try:
         data = request.json
         prompt = data.get("prompt", "").strip()
@@ -75,8 +88,13 @@ def ai_npc_prompt():
         if knowledge_context:
             system_prompt += f"\n\nAdditional context: {knowledge_context}"
 
-        # If no API key, use fallback
-        if not GEMINI_API_KEY:
+        # Check if Gemini API is configured (using centralized app config)
+        api_key = app.config.get('GEMINI_API_KEY')
+        server = app.config.get('GEMINI_SERVER')
+        
+        if not api_key or not server:
+            # If no API config, use fallback
+            current_app.logger.info("Gemini API not configured, using fallback responses")
             ai_response = generate_fallback_response(prompt, npc_type)
             conversation_history[session_id].append({"role": "user", "content": prompt})
             conversation_history[session_id].append({"role": "assistant", "content": ai_response})
@@ -86,12 +104,12 @@ def ai_npc_prompt():
                 "mode": "fallback"
             })
 
-        # Call Gemini API with full conversation history
+        # Call Gemini API with full conversation history (using working approach)
         ai_response = call_gemini_api(system_prompt, prompt, conversation_history[session_id])
 
         if not ai_response:
             # Use fallback if API failed (quota exceeded, no key, etc)
-            print("[DEBUG] Gemini API failed, using fallback response")
+            current_app.logger.info("Gemini API failed, using fallback response")
             ai_response = generate_fallback_response(prompt, npc_type)
 
         # Store in history
@@ -109,16 +127,20 @@ def ai_npc_prompt():
         })
 
     except Exception as e:
-        print(f"Error in ai_npc_prompt: {str(e)}")
+        current_app.logger.error(f"Error in ai_npc_prompt: {str(e)}")
         return jsonify({
             "status": "error",
             "message": str(e)
         }), 500
 
 
-@ainpc_api.route('/greeting', methods=['POST'])
+@ainpc_api.route('/greeting', methods=['POST', 'OPTIONS'])
 def get_greeting():
     """Get NPC greeting and reset conversation"""
+    # Handle preflight OPTIONS request
+    if request.method == 'OPTIONS':
+        return '', 204
+    
     try:
         data = request.json
         session_id = data.get("session_id", "default")
@@ -137,16 +159,20 @@ def get_greeting():
         })
 
     except Exception as e:
-        print(f"Error in get_greeting: {str(e)}")
+        current_app.logger.error(f"Error in get_greeting: {str(e)}")
         return jsonify({
             "status": "error",
             "message": str(e)
         }), 500
 
 
-@ainpc_api.route('/reset', methods=['POST'])
+@ainpc_api.route('/reset', methods=['POST', 'OPTIONS'])
 def reset_conversation():
     """Clear conversation history for a session"""
+    # Handle preflight OPTIONS request
+    if request.method == 'OPTIONS':
+        return '', 204
+    
     try:
         data = request.json
         session_id = data.get("session_id", "default")
@@ -160,7 +186,7 @@ def reset_conversation():
         })
 
     except Exception as e:
-        print(f"Error in reset_conversation: {str(e)}")
+        current_app.logger.error(f"Error in reset_conversation: {str(e)}")
         return jsonify({
             "status": "error",
             "message": str(e)
@@ -170,10 +196,15 @@ def reset_conversation():
 @ainpc_api.route('/test', methods=['GET'])
 def test():
     """Test API connectivity"""
+    api_key = app.config.get('GEMINI_API_KEY')
+    server = app.config.get('GEMINI_SERVER')
+    
     return jsonify({
         "status": "success",
         "message": "aiNPC API is live!",
-        "gemini_available": bool(GEMINI_API_KEY)
+        "gemini_configured": bool(api_key and server),
+        "api_key_present": bool(api_key),
+        "server_configured": bool(server)
     })
 
 
@@ -191,86 +222,77 @@ def status(session_id):
 def call_gemini_api(system_prompt, user_message, history):
     """
     Call Gemini API with conversation history for multi-turn dialogue.
-    Tries gemini-2.0-flash first, falls back to older models.
+    Uses the PROVEN working approach from gemini_api.py:
+    - Simple payload structure (no system_instruction field)
+    - Centralized config from app.config
+    - System prompt embedded in the text content
+    - Single API call with clear error handling
     """
     try:
-        models = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-pro"]
+        # Get configuration from centralized app config (same as gemini_api.py)
+        api_key = app.config.get('GEMINI_API_KEY')
+        server = app.config.get('GEMINI_SERVER')
         
-        headers = {"Content-Type": "application/json"}
-
-        # Build messages from history
-        messages = []
-        for turn in history:
-            messages.append({
-                "role": "user" if turn["role"] == "user" else "model",
-                "parts": [{"text": turn["content"]}]
-            })
-
-        # Add current message
-        messages.append({
-            "role": "user",
-            "parts": [{"text": user_message}]
-        })
-
+        if not api_key or not server:
+            current_app.logger.warning("Gemini API not configured, using fallback")
+            return None
+        
+        # Build the endpoint URL with API key
+        endpoint = f"{server}?key={api_key}"
+        
+        # Build conversation context from history
+        conversation_context = ""
+        if history:
+            conversation_context = "\n\nPrevious conversation:\n"
+            for turn in history[-10:]:  # Last 10 messages (5 exchanges) for context
+                role = "User" if turn["role"] == "user" else "Assistant"
+                conversation_context += f"{role}: {turn['content']}\n"
+        
+        # Combine system prompt, conversation history, and current message
+        # This is the WORKING approach from gemini_api.py - put everything in text
+        full_prompt = f"{system_prompt}{conversation_context}\n\nUser: {user_message}\n\nAssistant:"
+        
+        # Use the SIMPLE payload structure that WORKS (from gemini_api.py)
         payload = {
-            "system_instruction": {
-                "parts": [{"text": system_prompt}]
-            },
-            "contents": messages,
-            "generationConfig": {
-                "temperature": 0.8,
-                "maxOutputTokens": 300,
-                "topP": 0.95,
-                "topK": 40
-            }
+            "contents": [{
+                "parts": [{
+                    "text": full_prompt
+                }]
+            }]
         }
-
-        print(f"[DEBUG] Attempting Gemini API call with {len(messages)} messages")
-        print(f"[DEBUG] GEMINI_API_KEY exists: {bool(GEMINI_API_KEY)}")
-
-        # Try each model
-        for model in models:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
-            
-            try:
-                print(f"[DEBUG] Trying model: {model}")
-                response = requests.post(
-                    f"{url}?key={GEMINI_API_KEY}",
-                    json=payload,
-                    headers=headers,
-                    timeout=20
-                )
-
-                print(f"[DEBUG] {model} status code: {response.status_code}")
-
-                if response.status_code == 200:
-                    result = response.json()
-                    print(f"[DEBUG] Response received from {model}")
-                    try:
-                        ai_response = result["candidates"][0]["content"]["parts"][0]["text"]
-                        print(f"✓ Successfully used {model}")
-                        return ai_response.strip()
-                    except (KeyError, IndexError) as e:
-                        print(f"[DEBUG] Parse error with {model}: {str(e)}")
-                        print(f"[DEBUG] Response structure: {result}")
-                        continue
-                elif response.status_code == 429:
-                    print(f"[DEBUG] {model} returned 429 - Quota exceeded. Using fallback.")
-                    return None  # Signal to use fallback
-                else:
-                    print(f"[DEBUG] {model} returned {response.status_code}")
-                    print(f"[DEBUG] Response: {response.text[:500]}")
-                    continue
-                    
-            except Exception as e:
-                print(f"[DEBUG] Exception with {model}: {str(e)}")
-                continue
         
-        print("[DEBUG] All models failed")
+        current_app.logger.info(f"Making Gemini API request for NPC conversation")
+        
+        # Make request to Gemini API (same approach as gemini_api.py)
+        response = requests.post(
+            endpoint,
+            headers={'Content-Type': 'application/json'},
+            json=payload,
+            timeout=20  # 20 second timeout for NPC responses
+        )
+        
+        # Handle response
+        if response.status_code == 200:
+            result = response.json()
+            try:
+                ai_response = result['candidates'][0]['content']['parts'][0]['text']
+                current_app.logger.info("✓ Gemini API call successful")
+                return ai_response.strip()
+            except (KeyError, IndexError) as e:
+                current_app.logger.error(f"Error parsing Gemini response: {e}")
+                return None
+        elif response.status_code == 429:
+            current_app.logger.warning("Gemini API rate limit exceeded (429)")
+            return None  # Signal to use fallback
+        else:
+            current_app.logger.error(f"Gemini API error: {response.status_code} - {response.text[:200]}")
+            return None
+                    
+    except requests.RequestException as e:
+        current_app.logger.error(f"Error communicating with Gemini API: {e}")
         return None
-
     except Exception as e:
-        print(f"[DEBUG] Error in call_gemini_api: {str(e)}")
+        current_app.logger.error(f"Unexpected error in call_gemini_api: {e}")
         return None
 
 
