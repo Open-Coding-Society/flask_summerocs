@@ -22,6 +22,7 @@ from api.analytics import analytics_api
 from api.student import student_api
 from api.groq_api import groq_api
 from api.gemini_api import gemini_api
+from api.ainpc_api import ainpc_api
 from api.microblog_api import microblog_api
 from api.classroom_api import classroom_api
 from api.data_export_import_api import data_export_import_api
@@ -71,6 +72,7 @@ app.register_blueprint(skill_passport_api)
 app.register_blueprint(pfp_api) 
 app.register_blueprint(groq_api)
 app.register_blueprint(gemini_api)
+app.register_blueprint(ainpc_api)
 app.register_blueprint(microblog_api)
 
 app.register_blueprint(analytics_api)
