@@ -28,6 +28,7 @@ from api.classroom_api import classroom_api
 from api.data_export_import_api import data_export_import_api
 from hacks.joke import joke_api  # Import the joke API blueprint
 from api.post import post_api  # Import the social media post API
+from api.snapshot_proxy import snapshot_proxy
 #from api.announcement import announcement_api ##temporary revert
 
 # database Initialization functions
