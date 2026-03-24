@@ -113,17 +113,7 @@ class AINPCAPI:
                 # Check if Gemini API is configured (using centralized app config)
                 api_key = app.config.get('GEMINI_API_KEY')
                 server = app.config.get('GEMINI_SERVER')
-                if not api_key or not server:
-                    # If no API config, use fallback
-                    current_app.logger.info("Gemini API not configured, using fallback responses")
-                    ai_response = generate_fallback_response(prompt, npc_type)
-                    conversation_history[session_id].append({"role": "user", "content": prompt})
-                    conversation_history[session_id].append({"role": "assistant", "content": ai_response})
-                    return {
-                        "status": "success",
-                        "response": ai_response,
-                        "mode": "fallback"
-                    }
+ 
                 # Call Gemini API with full conversation history (using working approach)
                 ai_response = call_gemini_api(system_prompt, prompt, conversation_history[session_id])
                 if not ai_response:
@@ -139,6 +129,7 @@ class AINPCAPI:
                         mode = "fallback"
                 else:
                     mode = "gemini"
+                    
                 # Store in history
                 conversation_history[session_id].append({"role": "user", "content": prompt})
                 conversation_history[session_id].append({"role": "assistant", "content": ai_response})
@@ -163,6 +154,7 @@ def call_groq_api(system_prompt, user_message, history):
     Uses the /api/groq/chat endpoint pattern from groq_api.py.
     """
     try:
+        print("Attempting to call Groq API as fallback...")
         # Get configuration from centralized app config (same as groq_api.py)
         api_key = app.config.get('GROQ_API_KEY') or (hasattr(current_app, 'config') and current_app.config.get('GROQ_API_KEY'))
         server = app.config.get('GROQ_SERVER')
