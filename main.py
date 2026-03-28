@@ -26,6 +26,7 @@ from api.ainpc_api import ainpc_api
 from api.microblog_api import microblog_api
 from api.classroom_api import classroom_api
 from api.data_export_import_api import data_export_import_api
+from api.leaderboard import dynamic_api, events_api
 from hacks.joke import joke_api  # Import the joke API blueprint
 from api.post import post_api  # Import the social media post API
 from api.snapshot_proxy import snapshot_proxy
@@ -46,6 +47,7 @@ from model.persona import Persona, initPersonas, initPersonaUsers
 from model.skill_snapshot import SkillSnapshot
 from model.post import Post, init_posts
 from model.microblog import MicroBlog, Topic, initMicroblogs
+from model.leaderboard import ScoreCounterEvent, ElementaryLeaderboardEvent
 from hacks.jokes import initJokes 
 # from model.announcement import Announcement ##temporary revert
 
@@ -83,6 +85,8 @@ app.register_blueprint(study_api)
 app.register_blueprint(classroom_api)
 app.register_blueprint(feedback_api)
 app.register_blueprint(data_export_import_api)  # Register the data export/import API
+app.register_blueprint(dynamic_api)  # Register the dynamic leaderboard API
+app.register_blueprint(events_api)  # Register the elementary leaderboard API
 app.register_blueprint(joke_api)  # Register the joke API blueprint
 app.register_blueprint(post_api)  # Register the social media post API
 # app.register_blueprint(announcement_api) ##temporary revert
