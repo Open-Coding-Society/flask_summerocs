@@ -85,6 +85,7 @@ app.register_blueprint(feedback_api)
 app.register_blueprint(data_export_import_api)  # Register the data export/import API
 app.register_blueprint(joke_api)  # Register the joke API blueprint
 app.register_blueprint(post_api)  # Register the social media post API
+app.register_blueprint(snapshot_proxy)  # Register the snapshot proxy API
 # app.register_blueprint(announcement_api) ##temporary revert
 
 # Jokes file initialization
