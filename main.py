@@ -89,6 +89,7 @@ app.register_blueprint(dynamic_api)  # Register the dynamic leaderboard API
 app.register_blueprint(events_api)  # Register the elementary leaderboard API
 app.register_blueprint(joke_api)  # Register the joke API blueprint
 app.register_blueprint(post_api)  # Register the social media post API
+app.register_blueprint(snapshot_proxy)  # Register the snapshot proxy API
 # app.register_blueprint(announcement_api) ##temporary revert
 
 # Jokes file initialization
