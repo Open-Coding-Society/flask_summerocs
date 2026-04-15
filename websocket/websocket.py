@@ -42,8 +42,6 @@ def index():
 @socketio.on('connect')
 def handle_connect():
     print(f"[SERVER] Client connected: {request.sid}")
-    socketio.emit('live_update', {'msg': 'Welcome! Live data will stream here.'}, room=request.sid)
-
 
 @socketio.on('disconnect')
 def handle_disconnect():
