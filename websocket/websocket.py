@@ -38,20 +38,21 @@ def health():
 def index():
     return jsonify({"message": "websocket service running"}), 200
 
+
 @socketio.on('connect')
 def handle_connect():
-    print(f"Client connected: {request.sid}")
-    # Send a welcome message or initial data
+    print(f"[SERVER] Client connected: {request.sid}")
     socketio.emit('live_update', {'msg': 'Welcome! Live data will stream here.'}, room=request.sid)
+
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    print(f"[SERVER] Client disconnected: {request.sid}")
 
 @socketio.on('get_live_info')
 def handle_live_info(data=None):
     response = {"info": "This is live info from the server!"}
     socketio.emit('live_update', response, room=request.sid)
-    # This could fetch live info from your app, DB, etc.
-    data = {"info": "This is live info from the server!"}
-    socketio.emit('live_update', data, room=request.sid)
-
 
 if __name__ == "__main__":
     # Keep this aligned with `websocket/docker-compose.yml`
