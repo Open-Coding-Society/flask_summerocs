@@ -157,6 +157,7 @@ class User(db.Model, UserMixin):
     _ap_exam = db.Column(db.JSON, unique=False, nullable=True)
     _class = db.Column(db.JSON, unique=False, nullable=True)
     _school = db.Column(db.String(255), default="Unknown", nullable=True)
+    _game_profile = db.Column(db.JSON, unique=False, nullable=True)
 
     # Define many-to-many relationship with Section model through UserSection table
     # Overlaps setting silences SQLAlchemy warnings about multiple relationship paths
@@ -170,7 +171,7 @@ class User(db.Model, UserMixin):
     personas = db.relationship('Persona', secondary='user_personas', lazy='subquery',
                                overlaps="user_personas_rel,persona,users")
     
-    def __init__(self, name, uid, password=app.config["DEFAULT_PASSWORD"], kasm_server_needed=False, role="User", pfp='', grade_data=None, ap_exam=None, school="Unknown", sid=None, classes=None):
+    def __init__(self, name, uid, password=app.config["DEFAULT_PASSWORD"], kasm_server_needed=False, role="User", pfp='', grade_data=None, ap_exam=None, school="Unknown", sid=None, classes=None, game_profile=None):
         self._name = name
         self._uid = uid
         self._email = "?"
@@ -185,6 +186,7 @@ class User(db.Model, UserMixin):
         # keep it as a JSON column in the DB
         self._class = classes if classes is not None else []
         self._school = school
+        self._game_profile = game_profile if game_profile else None
 
     # UserMixin/Flask-Login requires a get_id method to return the id as a string
     def get_id(self):
@@ -341,6 +343,14 @@ class User(db.Model, UserMixin):
     def school(self, school):
         self._school = school
 
+    @property
+    def game_profile(self):
+        return self._game_profile
+
+    @game_profile.setter
+    def game_profile(self, game_profile):
+        self._game_profile = game_profile
+
     # CRUD create/add a new record to the table
     # returns self or None on error
     def create(self, inputs=None):
@@ -370,7 +380,8 @@ class User(db.Model, UserMixin):
             "grade_data": self.grade_data,
             "ap_exam": self.ap_exam,
             "password": self._password,  # Only for internal use, not for API
-            "school": self.school
+            "school": self.school,
+            "game_profile": self.game_profile,
         }
         sections = self.read_sections()
         data.update(sections)
@@ -426,6 +437,9 @@ class User(db.Model, UserMixin):
                 self._class = class_list
         if school is not None:
             self.school = school
+        game_profile = inputs.get("game_profile", None)
+        if game_profile is not None:
+            self.game_profile = game_profile
 
         # Check this on each update
         if not email:
