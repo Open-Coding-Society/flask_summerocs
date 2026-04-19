@@ -351,6 +351,90 @@ class User(db.Model, UserMixin):
     def game_profile(self, game_profile):
         self._game_profile = game_profile
 
+    def save_game_profile(self, game_profile):
+        """Create or replace the user's game profile and persist to DB."""
+        from sqlalchemy.orm.attributes import flag_modified
+        self._game_profile = game_profile
+        flag_modified(self, '_game_profile')
+        try:
+            db.session.commit()
+            return self._game_profile
+        except Exception:
+            db.session.rollback()
+            return None
+
+    def update_game_profile(self, incoming):
+        """
+        Deep-merge incoming game profile data into the existing record.
+
+        Returns the merged profile, or None on DB error.
+        Raises ValueError if incoming eventId is older than stored.
+        """
+        from sqlalchemy.orm.attributes import flag_modified
+
+        existing = self._game_profile or {}
+
+        # Event-ID conflict guard (prefer eventId over lastModified timestamps)
+        incoming_ev = incoming.get('eventId', 0)
+        existing_ev = existing.get('eventId', 0)
+        if incoming_ev and incoming_ev < existing_ev:
+            raise ValueError('stale')
+
+        # Deep merge: top-level keys from incoming win, then per-level sub-merge
+        merged = {**existing, **incoming}
+        for level in ('identity-forge', 'wayfinding-world', 'mission-tooling'):
+            if level in incoming and level in existing:
+                el = existing[level]
+                il = incoming[level]
+                merged[level] = {
+                    **el,
+                    **il,
+                    'preferences': {**(el.get('preferences') or {}), **(il.get('preferences') or {})},
+                    'progress':    {**(el.get('progress')    or {}), **(il.get('progress')    or {})},
+                }
+
+        self._game_profile = merged
+        flag_modified(self, '_game_profile')
+        try:
+            db.session.commit()
+            return self._game_profile
+        except Exception:
+            db.session.rollback()
+            return None
+
+    def clear_game_profile(self):
+        """Reset game progress while preserving identity metadata."""
+        from sqlalchemy.orm.attributes import flag_modified
+        existing = self._game_profile or {}
+        self._game_profile = {
+            'version': '1.0',
+            'localId': existing.get('localId'),
+            'createdAt': existing.get('createdAt'),
+            'updatedAt': None,
+            'eventId': 0,
+            'identity-forge': {
+                'preferences': {},
+                'progress': {'identityUnlocked': False, 'avatarSelected': False},
+                'completedAt': None,
+            },
+            'wayfinding-world': {
+                'preferences': {},
+                'progress': {'worldThemeSelected': False, 'navigationComplete': False},
+                'completedAt': None,
+            },
+            'mission-tooling': {
+                'progress': {'toolsUnlocked': False},
+                'completedAt': None,
+            },
+        }
+        flag_modified(self, '_game_profile')
+        try:
+            db.session.commit()
+            return self._game_profile
+        except Exception:
+            db.session.rollback()
+            return None
+
     # CRUD create/add a new record to the table
     # returns self or None on error
     def create(self, inputs=None):
