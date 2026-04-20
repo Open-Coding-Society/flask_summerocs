@@ -1,5 +1,5 @@
-import eventlet
-eventlet.monkey_patch()
+import gevent
+from gevent import pywsgi
 
 from flask import Flask, jsonify, request
 from flask_socketio import SocketIO
@@ -7,7 +7,7 @@ from flask_socketio import SocketIO
 import time
 
 app = Flask(__name__)
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode="eventlet")
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode="gevent")
 
 @app.get("/health")
 def health():
@@ -91,4 +91,12 @@ def handle_live_status(data=None):
     
 if __name__ == "__main__":
     # Keep this aligned with `websocket/docker-compose.yml`
-    socketio.run(app, host="0.0.0.0", port=8590)
+    print("\n" + "="*60)
+    print("WebSocket Server Starting...")
+    print("="*60)
+    print("Host: 0.0.0.0:8590")
+    print("Connect with: ws://localhost:8590/")
+    print("CORS enabled for all origins")
+    print("⚡ Async mode: gevent")
+    print("="*60 + "\n")
+    socketio.run(app, host="0.0.0.0", port=8590, debug=False)
