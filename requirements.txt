@@ -17,4 +17,9 @@ pymysql
 psycopg2-binary
 python_dotenv
 boto3
-deepface
+# ---------------------------------------------------------
+# Face Recognition & ML Dependencies
+# ---------------------------------------------------------
+insightface
+onnxruntime
+opencv-python
